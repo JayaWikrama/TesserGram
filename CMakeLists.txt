@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0.0)
 
 # Project configuration
-project(telebot LANGUAGES C CXX)
+project(tessergram LANGUAGES C CXX)
 
 # Define versioning variables
 set(PROJECT_VERSION_MAJOR "1")
@@ -13,8 +13,8 @@ set(PROJECT_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT
 string(TIMESTAMP BUILD_YEAR "%Y")
 string(TIMESTAMP BUILD_MONTH "%m")
 string(TIMESTAMP BUILD_DAY "%d")
-set(TELEBOT_MODULE_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${BUILD_YEAR}${BUILD_MONTH}${BUILD_DAY}")
-add_definitions(-DTELEBOT_MODULE_VERSION="${TELEBOT_MODULE_VERSION}")
+set(TESSER_GRAM_MODULE_VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}-${BUILD_YEAR}${BUILD_MONTH}${BUILD_DAY}")
+add_definitions(-DTESSER_GRAM_MODULE_VERSION="${TESSER_GRAM_MODULE_VERSION}")
 
 # Find and Check Library
 find_package(PkgConfig REQUIRED)
@@ -44,7 +44,7 @@ if(BUILD_TESTS)
   FetchContent_MakeAvailable(googletest)
 endif()
 
-add_definitions(-D__DATA_DIRECTORY__="root.telebot.data/")
+add_definitions(-D__DATA_DIRECTORY__="root.tessergram.data/")
 
 # Verbose compile option
 option(VERBOSE "Enable verbose compile" OFF)
