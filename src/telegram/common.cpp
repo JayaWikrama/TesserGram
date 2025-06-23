@@ -2,10 +2,7 @@
 #include <iostream>
 #include <cstring>
 #include "telegram.hpp"
-#include "request.hpp"
 #include "json-parser.hpp"
-
-#define TELEGRAM_BASE_URL "https://api.telegram.org"
 
 NodeMessage::NodeMessage(const std::string& message){
     JsonObject json(message);
@@ -55,12 +52,13 @@ void Messages::enqueue(const std::string& message){
         msg = new NodeMessage(message);
         if (this->first == nullptr){
             this->first = msg;
-            this->end = msg;
+            this->n++;
         }
         else {
             this->n++;
             this->end->next = msg;
         }
+        this->end = msg;
     } catch (const std::runtime_error& e) {
         std::cerr << "Caught runtime_error: " << e.what() << std::endl;
     }
@@ -94,7 +92,8 @@ const NodeMessage *Messages::getMessage() const {
 }
 
 Telegram::Telegram(const std::string &token){
-    this->id = 0UL;
+    this->id = 0;
+    this->lastUpdateId = 0;
     this->name = "";
     this->username = "";
     this->token = token;
@@ -114,41 +113,4 @@ const std::string& Telegram::getName() const{
 
 const std::string& Telegram::getUsername() const{
     return this->username;
-}
-
-bool Telegram::apiGetMe(){
-    Request req(TELEGRAM_BASE_URL, this->token, Request::CONFIG);
-    if (req.isSuccess()){
-        JsonObject json(req.getResponse());
-        if (json["result->id"].isAvailable()){
-            this->id = std::stoll(json["result->id"].getString());
-            this->name = json["result->first_name"].getString();
-            this->username = json["result->username"].getString();
-            return true;
-        }
-    }
-    return false;
-}
-
-bool Telegram::apigetUpdates(){
-    Request req(TELEGRAM_BASE_URL, this->token, Request::UPDATES);
-    if (req.isSuccess()){
-        JsonObject json(req.getResponse());
-        int arrayLength = json["result"].getArraySize();
-        for (int i = 0; i < arrayLength; i++) {
-            this->message.enqueue(json["result[" + std::to_string(i) + "]"].getString());
-        }
-        return true;
-    }
-    return false;
-}
-
-bool Telegram::apiSendMessage(long long targetId, const std::string& message){
-    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"text\":\"" + message + "\"}";
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, data);
-    if (req.isSuccess()){
-        std::cout << "success" << std::endl;
-        return true;
-    }
-    return false;
 }

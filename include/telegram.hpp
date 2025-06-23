@@ -3,6 +3,8 @@
 
 #include <string>
 
+#define TELEGRAM_BASE_URL "https://api.telegram.org"
+
 class NodeMessage {
     public:
         time_t time;
@@ -43,6 +45,7 @@ class Messages {
 class Telegram {
     private:
         long long id;
+        long long lastUpdateId;
         std::string name;
         std::string username;
         std::string token;
