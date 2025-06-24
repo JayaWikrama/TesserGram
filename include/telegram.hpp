@@ -2,6 +2,7 @@
 #define __TELEGRAM_API_HPP__
 
 #include <string>
+#include "request.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
 
@@ -50,6 +51,8 @@ class Telegram {
         std::string username;
         std::string token;
 
+        bool __apiSendMedia(long long targetId, Request::REQUEST_t type, const std::string& label, const std::string& filePath);
+
     public:
         Messages message;
         Telegram(const std::string &token);
@@ -57,9 +60,23 @@ class Telegram {
         long long getId();
         const std::string& getName() const;
         const std::string& getUsername() const;
+
         bool apiGetMe();
-        bool apigetUpdates();
+        bool apiGetUpdates();
         bool apiSendMessage(long long targetId, const std::string& message);
+
+        bool apiSendDocument(long long targetId, const std::string& label, const std::string& filePath);
+        bool apiSendPhoto(long long targetId, const std::string& label, const std::string& filePath);
+        bool apiSendAudio(long long targetId, const std::string& label, const std::string& filePath);
+        bool apiSendVoice(long long targetId, const std::string& label, const std::string& filePath);
+        bool apiSendAnimation(long long targetId, const std::string& label, const std::string& filePath);
+        bool apiSendVideo(long long targetId, const std::string& label, const std::string& filePath);
+
+        bool apiSetWebhook(const std::string& url, const std::string& secretToken, const std::string& allowedUpdates, unsigned short maxConnection);
+        bool apiSetWebhook(const std::string& url, const std::string& secretToken, const std::string& allowedUpdates);
+        bool apiSetWebhook(const std::string& url, unsigned short maxConnection);
+        bool apiSetWebhook(const std::string& url);
+        bool apiUnsetWebhook();
 };
 
 #endif

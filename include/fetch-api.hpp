@@ -51,6 +51,7 @@ class FetchAPI {
 
     bool get(const std::map<std::string, std::string> &params = {});
     bool post();
+    bool sendFile();
 
     std::string getPayload();
     std::string getError();

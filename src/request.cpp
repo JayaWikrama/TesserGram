@@ -7,10 +7,18 @@
 static const char *reqStr[] = {
     "getMe",
     "getUpdates",
-    "sendMessage"
+    "sendMessage",
+    "sendPhoto",
+    "sendAudio",
+    "sendVideo",
+    "sendAnimation",
+    "sendVoice",
+    "sendDocument",
+    "setWebhook",
+    "deleteWebhook"
 };
 
-Request::Request(const std::string &url, std::string &token, Request::REQUEST_t req){
+Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req){
     this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[req];
     FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
     api.enableDebug();
@@ -20,13 +28,24 @@ Request::Request(const std::string &url, std::string &token, Request::REQUEST_t 
     }
 }
 
-Request::Request(const std::string &url, std::string &token, Request::REQUEST_t req, std::string &data){
+Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req, const std::string &data){
     this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[req];
     FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
     api.enableDebug();
     api.insertHeader("Content-Type", "application/json");
     api.setBody(data);
     this->success = api.post();
+    if (this->success){
+        this->response = api.getPayload();
+    }
+}
+
+Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req, const JsonBuilder &data){
+    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[req];
+    FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
+    api.enableDebug();
+    api.setBody(data.dump());
+    this->success = api.sendFile();
     if (this->success){
         this->response = api.getPayload();
     }

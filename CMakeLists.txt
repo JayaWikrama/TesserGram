@@ -58,7 +58,9 @@ set(SOURCE_FILES
   src/fetch-api.cpp
   src/json-parser.cpp
   src/request.cpp
-  src/telegram.cpp
+  src/telegram/common.cpp
+  src/telegram/basic.cpp
+  src/telegram/media.cpp
 )
 
 # Create static library

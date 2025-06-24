@@ -3,6 +3,7 @@
 #include <stdexcept>
 #include <curl/curl.h>
 #include "fetch-api.hpp"
+#include "json-parser.hpp"
 
 FetchAPI::FetchAPI(const std::string &url, unsigned short connectTimeout, unsigned short totalTimeout){
   if (pthread_mutex_init(&(this->mutex), nullptr)) throw std::runtime_error("Failed to initialize mutex!");
@@ -206,6 +207,118 @@ bool FetchAPI::post() {
   if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s with data %s\n", this->url.c_str(), this->body.c_str());
 
   CURLcode res = curl_easy_perform(curl);
+  long httpCode = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+  if (res != CURLE_OK) {
+    this->errorMsg = curl_easy_strerror(res);
+    switch (res) {
+      case CURLE_COULDNT_CONNECT:
+        this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+        break;
+      case CURLE_OPERATION_TIMEDOUT:
+        this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+        break;
+      case CURLE_URL_MALFORMAT:
+        this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+        break;
+      default:
+        this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+        break;
+    }
+  } else if (httpCode >= 400) {
+    this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
+    this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
+  } else {
+    this->payload = response;
+    this->errorCode = FetchAPI::FETCH_OK;
+  }
+
+  if (this->debug){
+    if (this->errorCode == FetchAPI::FETCH_OK){
+      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s success\n", this->url.c_str());
+    }
+    else {
+      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "POST request to %s failed [%s]\n", this->url.c_str(), this->errorMsg.c_str());
+      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
+    }
+  }
+
+  if (chunk) curl_slist_free_all(chunk);
+  curl_easy_cleanup(curl);
+
+  pthread_mutex_unlock(&(this->mutex));
+  return (this->errorCode == FetchAPI::FETCH_OK);
+}
+
+bool FetchAPI::sendFile() {
+  pthread_mutex_lock(&(this->mutex));
+  reset();
+  if (body.length() == 0){
+    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->errorMsg = "body empty";
+    pthread_mutex_unlock(&(this->mutex));
+    return false;
+  }
+  JsonObject json(this->body);
+  int arrayLength = json["mime"].getArraySize();
+  if (arrayLength == 0){
+    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->errorMsg = "invalid json format";
+    pthread_mutex_unlock(&(this->mutex));
+    return false;
+  }
+  curl_mime *mime = nullptr;
+  curl_mimepart *part = nullptr;
+  CURL *curl = curl_easy_init();
+  if (!curl) {
+    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->errorMsg = "Failed to initialize CURL";
+    pthread_mutex_unlock(&(this->mutex));
+    return false;
+  }
+
+  struct curl_slist *chunk = nullptr;
+  for (const auto &pair : this->headers) {
+    const auto &key = pair.first;
+    const auto &val = pair.second;
+    if (key != std::string("Content-Type") && key != std::string("Content-type") && key != std::string("content-type")){
+      chunk = curl_slist_append(chunk, (key + ": " + val).c_str());
+    }
+  }
+
+  std::string response;
+  curl_easy_setopt(curl, CURLOPT_URL, this->url.c_str());
+  curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, this->totalTimeout);
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent-telegram/1.0");
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FetchAPI::writeCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
+  if (chunk) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+  mime = curl_mime_init(curl);
+
+  for (int i = 0; i < arrayLength; i++) {
+    part = curl_mime_addpart(mime);
+    curl_mime_name(part, json["mime[" + std::to_string(i) + "]->name"].getString().c_str());
+    if (json["mime[" + std::to_string(i) + "]->is_file"].getString() == "true"){
+      curl_mime_filedata(part, json["mime[" + std::to_string(i) + "]->data"].getString().c_str());
+    }
+    else {
+      curl_mime_data(part, json["mime[" + std::to_string(i) + "]->data"].getString().c_str(), CURL_ZERO_TERMINATED);
+    }
+    if (json["mime[" + std::to_string(i) + "]->content_type"].isAvailable()){
+      curl_mime_type(part, json["mime[" + std::to_string(i) + "]->content_type"].getString().c_str());
+    }
+  }
+
+  curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
+
+  if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s with data %s\n", this->url.c_str(), this->body.c_str());
+
+  CURLcode res = curl_easy_perform(curl);
+  curl_mime_free(mime);
   long httpCode = 0;
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
