@@ -7,13 +7,13 @@
 NodeMessage::NodeMessage(const std::string& message){
     JsonObject json(message);
     if (json["update_id"].isAvailable() == false) throw std::runtime_error("Invalid input: " + message + "!");
-    this->time = static_cast<time_t>(std::stoll(json["message->date"].getString()));
     this->id = std::stoll(json["update_id"].getString());
+    this->time = json["message->date"].isAvailable() ? static_cast<time_t>(std::stoll(json["message->date"].getString())) : 0;
+    this->sender.id = json["message->from->id"].isAvailable() ? std::stoll(json["message->from->id"].getString()) : 0;
+    this->room.id = json["message->chat->id"].isAvailable() ? std::stoll(json["message->chat->id"].getString()) : 0;
     this->sender.isBot = (json["message->from->is_bot"].getString() == "true" ? true : false);
-    this->sender.id = std::stoll(json["message->from->id"].getString());
     this->sender.name = json["message->from->first_name"].getString();
     this->sender.username = json["message->from->username"].getString();
-    this->room.id = std::stoll(json["message->chat->id"].getString());
     this->room.type = json["message->chat->type"].getString();
     if (this->room.type == "private"){
         this->room.title = json["message->chat->first_name"].getString();
