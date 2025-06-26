@@ -55,6 +55,7 @@ class Telegram {
 
     public:
         Messages message;
+        void *webhookCallback;
         Telegram(const std::string &token);
         ~Telegram();
         long long getId();
@@ -77,6 +78,9 @@ class Telegram {
         bool apiSetWebhook(const std::string& url, unsigned short maxConnection);
         bool apiSetWebhook(const std::string& url);
         bool apiUnsetWebhook();
+
+        void setWebhookCallback(void (*__callback)(Telegram &, void *));
+        void servWebhook();
 };
 
 #endif

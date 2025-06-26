@@ -1,8 +1,8 @@
 #include "fetch-api.hpp"
 #include "request.hpp"
 
-#define CONNECTION_TIMEOUT 3
-#define ALL_TIMEOUT 10
+#define CONNECTION_TIMEOUT 10
+#define ALL_TIMEOUT 15
 
 static const char *reqStr[] = {
     "getMe",

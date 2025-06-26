@@ -61,6 +61,8 @@ set(SOURCE_FILES
   src/telegram/common.cpp
   src/telegram/basic.cpp
   src/telegram/media.cpp
+  src/telegram/webhook.cpp
+  external/mongoose/src/mongoose.c
 )
 
 # Create static library
@@ -83,6 +85,7 @@ target_link_libraries(${PROJECT_NAME}-lib ${CURL_LIBRARIES})
 # Include directories for the project
 set(INCLUDE_DIRS
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/mongoose/include>
   $<INSTALL_INTERFACE:include>
   ${CURL_INCLUDE_DIR}
 )
@@ -104,6 +107,9 @@ if(BUILD_TESTS)
 endif()
 
 # Compiler and linker flags
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fPIC")
+set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fPIC")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -fPIC")

@@ -97,6 +97,7 @@ Telegram::Telegram(const std::string &token){
     this->name = "";
     this->username = "";
     this->token = token;
+    this->webhookCallback = nullptr;
 }
 
 Telegram::~Telegram(){
