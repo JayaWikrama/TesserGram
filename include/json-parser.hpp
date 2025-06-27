@@ -17,9 +17,13 @@ private:
 
 
 public:
+    JsonObject();
+
     JsonObject(const std::string& json);
 
     ~JsonObject();
+
+    void parse(const std::string& json);
 
     class JsonValue {
     private:

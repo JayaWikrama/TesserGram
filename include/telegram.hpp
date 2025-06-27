@@ -8,7 +8,14 @@
 
 class NodeMessage {
     public:
+        typedef enum _updateType_t {
+            MESSAGE = 0,
+            CALLBACK_QUERY = 1
+        } updateType_t;
+        updateType_t type;
         time_t time;
+        long long updateId;
+        long long callbackId;
         long long id;
         struct Sender_t {
             bool isBot;

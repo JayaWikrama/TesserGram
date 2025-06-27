@@ -1,11 +1,19 @@
 #include "json-parser.hpp"
 
+JsonObject::JsonObject() {
+    // do nothing
+}
+
 JsonObject::JsonObject(const std::string& json) {
     root = nlohmann::json::parse(json, nullptr, false);
 }
 
 JsonObject::~JsonObject(){
     
+}
+
+void JsonObject::parse(const std::string& json) {
+    root = nlohmann::json::parse(json, nullptr, false);
 }
 
 std::vector<std::string> JsonObject::split(const std::string& s, const std::string& delimiter) {

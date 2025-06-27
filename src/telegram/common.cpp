@@ -6,22 +6,34 @@
 
 NodeMessage::NodeMessage(const std::string& message){
     JsonObject json(message);
+    JsonObject jmessage;
     if (json["update_id"].isAvailable() == false) throw std::runtime_error("Invalid input: " + message + "!");
-    this->id = std::stoll(json["update_id"].getString());
-    this->time = json["message->date"].isAvailable() ? static_cast<time_t>(std::stoll(json["message->date"].getString())) : 0;
-    this->sender.id = json["message->from->id"].isAvailable() ? std::stoll(json["message->from->id"].getString()) : 0;
-    this->room.id = json["message->chat->id"].isAvailable() ? std::stoll(json["message->chat->id"].getString()) : 0;
-    this->sender.isBot = (json["message->from->is_bot"].getString() == "true" ? true : false);
-    this->sender.name = json["message->from->first_name"].getString();
-    this->sender.username = json["message->from->username"].getString();
-    this->room.type = json["message->chat->type"].getString();
-    if (this->room.type == "private"){
-        this->room.title = json["message->chat->first_name"].getString();
+    this->updateId = std::stoll(json["update_id"].getString());
+    if (json["callback_query"].isAvailable()){
+        this->callbackId = std::stoll(json["callback_query->id"].getString());
+        this->message = json["callback_query->data"].getString();
+        this->type = NodeMessage::CALLBACK_QUERY;
+        jmessage.parse(json["callback_query->message"].getString());
     }
     else {
-        this->room.title = json["message->chat->title"].getString();
+        this->message = json["message->text"].getString();
+        this->type = NodeMessage::MESSAGE;
+        jmessage.parse(json["message"].getString());
     }
-    this->message = json["message->text"].getString();
+    this->id = std::stoll(jmessage["message_id"].getString());
+    this->time = jmessage["date"].isAvailable() ? static_cast<time_t>(std::stoll(jmessage["date"].getString())) : 0;
+    this->sender.id = jmessage["from->id"].isAvailable() ? std::stoll(jmessage["from->id"].getString()) : 0;
+    this->room.id = jmessage["chat->id"].isAvailable() ? std::stoll(jmessage["chat->id"].getString()) : 0;
+    this->sender.isBot = (jmessage["from->is_bot"].getString() == "true" ? true : false);
+    this->sender.name = jmessage["from->first_name"].getString();
+    this->sender.username = jmessage["from->username"].getString();
+    this->room.type = jmessage["chat->type"].getString();
+    if (this->room.type == "private"){
+        this->room.title = jmessage["chat->first_name"].getString();
+    }
+    else {
+        this->room.title = jmessage["chat->title"].getString();
+    }
     this->next = nullptr;
 }
 
@@ -39,7 +51,9 @@ void NodeMessage::display() const {
             dtime.tm_sec
         );
     dtimestr[19] = 0x00;
-    std::cout << "Message ID  : " << this->id << " [" << dtimestr << "]:" << std::endl;
+    std::cout << "Update ID   : " << this->updateId << " [" << dtimestr << "]:" << std::endl;
+    std::cout << "  Type      : " << (this->type == NodeMessage::MESSAGE ? "message" : "callback_query") << std::endl;
+    std::cout << "  id        : " << this->id << std::endl;
     std::cout << "  Sender    : " << this->sender.name << std::endl;
     std::cout << "  Room Id   : " << this->room.id << std::endl;
     std::cout << "  Room Name : " << this->room.title << std::endl;
