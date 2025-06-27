@@ -16,6 +16,11 @@ void JsonObject::parse(const std::string& json) {
     root = nlohmann::json::parse(json, nullptr, false);
 }
 
+std::string JsonObject::getType() const {
+    JsonObject::JsonValue val(root);
+    return val.getType();
+}
+
 std::vector<std::string> JsonObject::split(const std::string& s, const std::string& delimiter) {
     std::vector<std::string> tokens;
     size_t start = 0;

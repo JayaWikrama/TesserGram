@@ -62,6 +62,7 @@ set(SOURCE_FILES
   src/telegram/basic.cpp
   src/telegram/media.cpp
   src/telegram/webhook.cpp
+  src/telegram/keyboard.cpp
   external/mongoose/src/mongoose.c
 )
 

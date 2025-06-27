@@ -25,6 +25,8 @@ public:
 
     void parse(const std::string& json);
 
+    std::string getType() const;
+
     class JsonValue {
     private:
         const nlohmann::json* value;

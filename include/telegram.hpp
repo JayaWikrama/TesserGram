@@ -2,9 +2,36 @@
 #define __TELEGRAM_API_HPP__
 
 #include <string>
+#include <vector>
 #include "request.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
+
+class TKeyboard {
+    public:
+        typedef enum _TKeyType_t {
+            KEYBOARD = 0,
+            INLINE_KEYBOARD = 1
+        } TKeyType_t;
+
+        typedef enum _TValueType_t {
+            COMMON = 0,
+            URL = 1,
+            CALLBACK_QUERY = 2
+        } TValueType_t;
+
+        TKeyboard(TKeyType_t type, const std::string &caption);
+        ~TKeyboard();
+        bool addButton(const std::string &button);
+        bool addButton(TValueType_t type, const std::string &text, const std::string &value);
+        const std::string& getCaption() const;
+        std::string getMarkup() const;
+
+    private:
+        TKeyType_t type;
+        std::string caption;
+        std::vector <std::string> buttons;
+};
 
 class NodeMessage {
     public:
@@ -86,9 +113,10 @@ class Telegram {
         bool apiSetWebhook(const std::string& url, unsigned short maxConnection);
         bool apiSetWebhook(const std::string& url);
         bool apiUnsetWebhook();
-
         void setWebhookCallback(void (*__callback)(Telegram &, void *), void *data);
         void servWebhook();
+
+        bool apiSendKeyboard(long long targetId, const TKeyboard &keyboard);
 };
 
 #endif
