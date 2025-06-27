@@ -43,6 +43,7 @@
 class Debug {
     private:
         size_t maxLineLogs;
+        std::vector <std::string> confidential;
         std::vector <std::string> history;
         pthread_mutex_t mutex;
     
@@ -61,6 +62,8 @@ class Debug {
         ~Debug();
 
         std::string logTypeToString(LogType_t type) const;
+
+        void setConfidential(const std::string &confidential);
 
         void log(LogType_t type, const char* functionName, const char* format, ...);
 

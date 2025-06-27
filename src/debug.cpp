@@ -28,6 +28,17 @@
 #include <cstdarg>
 #include "debug.hpp"
 
+static std::string hideConfidential(const std::string& str, const std::string& confidential) {
+    size_t pos = str.find(confidential);
+    if (pos != std::string::npos) {
+        std::string result = str;
+        result.replace(pos, confidential.length(), "*****");
+        return result;
+    } else {
+        return str;
+    }
+}
+
 Debug::Debug(){
     this->maxLineLogs = 1000;
     this->history.clear();
@@ -55,6 +66,10 @@ std::string Debug::logTypeToString(Debug::LogType_t type) const {
         case Debug::CRITICAL: return "C";
     }
     return "UNKNOWN";
+}
+
+void Debug::setConfidential(const std::string &confidential){
+    this->confidential.push_back(confidential);
 }
 
 void Debug::log(Debug::LogType_t type, const char* functionName, const char* format, ...){
@@ -106,6 +121,10 @@ void Debug::log(Debug::LogType_t type, const char* functionName, const char* for
             << "]: " << functionName << ": " << messageBuffer.data();
     }
     std::string logEntry = oss.str();
+
+    for (int i = 0; i < confidential.size(); i++){
+        logEntry = hideConfidential(logEntry, confidential.at(i));
+    }
 
     std::cout << logEntry;
 

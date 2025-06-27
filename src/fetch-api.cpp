@@ -32,6 +32,20 @@ void FetchAPI::enableDebug(){
   pthread_mutex_unlock(&(this->mutex));
 }
 
+void FetchAPI::enableDebug(const std::string &confidential){
+  pthread_mutex_lock(&(this->mutex));
+  this->debug = new Debug(100);
+  this->debug->setConfidential(confidential);
+  pthread_mutex_unlock(&(this->mutex));
+}
+
+void FetchAPI::enableDebug(const std::vector <std::string> &confidential){
+  pthread_mutex_lock(&(this->mutex));
+  this->debug = new Debug(100);
+  for (int i = 0; i < confidential.size(); i++)  this->debug->setConfidential(confidential.at(i));
+  pthread_mutex_unlock(&(this->mutex));
+}
+
 void FetchAPI::disableDebug(){
   pthread_mutex_lock(&(this->mutex));
   delete (this->debug);

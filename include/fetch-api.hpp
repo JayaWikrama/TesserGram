@@ -42,6 +42,8 @@ class FetchAPI {
     ~FetchAPI();
 
     void enableDebug();
+    void enableDebug(const std::string &confidential);
+    void enableDebug(const std::vector <std::string> &confidential);
     void disableDebug();
     bool isDebugEnable();
     Debug& DEBUG();
