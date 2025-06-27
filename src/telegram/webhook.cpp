@@ -26,7 +26,7 @@ static void webhookHandler(struct mg_connection *c, int ev, void *ev_data){
 
     if (hook->webhookCallback){
         void *(*callback)(Telegram &, void *) = (void *(*)(Telegram &, void *))hook->webhookCallback;
-        callback(*hook, nullptr);
+        callback(*hook, hook->webhookCallbackData);
     }
 }
 
@@ -65,8 +65,9 @@ bool Telegram::apiUnsetWebhook(){
     return false;
 }
 
-void Telegram::setWebhookCallback(void (*__callback)(Telegram &, void *)){
+void Telegram::setWebhookCallback(void (*__callback)(Telegram &, void *), void *data){
     this->webhookCallback = (void *) __callback;
+    this->webhookCallbackData = data;
 }
 
 void Telegram::servWebhook(){
