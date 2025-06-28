@@ -31,22 +31,8 @@ int main(int argc, char **argv){
         debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Name: %s\n", telegram.getName().c_str());
         debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Username: %s\n", telegram.getUsername().c_str());
         
-        TKeyboard keyboard(TKeyboard::INLINE_KEYBOARD, "Test Keyboard!");
-        keyboard.addButton(TKeyboard::URL, "Google", "www.google.com");
-        
-        TKeyboard::TKeyButtonConstructor_t button;
-        std::vector <TKeyboard::TKeyButtonConstructor_t> buttons;
-        button.type = TKeyboard::CALLBACK_QUERY;
-        button.text = "No!";
-        button.value = "no";
-        buttons.push_back(button);
-        button.type = TKeyboard::CALLBACK_QUERY;
-        button.text = "Yes!";
-        button.value = "yes";
-        buttons.push_back(button);
-        keyboard.addButton(buttons);
-        
-        telegram.apiSendKeyboard(std::stoll(env["bot->target_id"].getString()), keyboard);
+        telegram.apiSendDocument(std::stoll(env["bot->target_id"].getString()), "Read this document!", "../README.md");
+        telegram.apiSendPhoto(std::stoll(env["bot->target_id"].getString()), "This the picture!", "../docs/images/typing_chat_action.jpeg");
     }
     else {
         debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "Failed to access telegram!\n");
