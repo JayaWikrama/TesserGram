@@ -94,9 +94,21 @@ target_include_directories(${PROJECT_NAME}-ar PUBLIC ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-lib PUBLIC ${INCLUDE_DIRS})
 
 # Create example executable
+
+## Main Example
 add_executable(${PROJECT_NAME} examples/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC -lpthread)
+
+## Keyboard Example
+add_executable(${PROJECT_NAME}-keyboard examples/keyboard.cpp)
+target_link_libraries(${PROJECT_NAME}-keyboard PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-keyboard PUBLIC -lpthread)
+
+## Inline Keyboard Example
+add_executable(${PROJECT_NAME}-inline-keyboard examples/inline-keyboard.cpp)
+target_link_libraries(${PROJECT_NAME}-inline-keyboard PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-inline-keyboard PUBLIC -lpthread)
 
 # Add test configuration (only when tests are enabled)
 if(BUILD_TESTS)

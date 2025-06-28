@@ -2,13 +2,18 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <unistd.h>
 #include "json-parser.hpp"
+#include "fetch-api.hpp"
 #include "telegram.hpp"
+#include "debug.hpp"
+
+Debug debug(10);
 
 std::string readenv() {
     std::ifstream file(".env");
     if (!file.is_open()) {
-        std::cerr << "ENV not found!" << std::endl;
+        debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "ENV not found!\n");
         return "";
     }
 
@@ -19,29 +24,82 @@ std::string readenv() {
     return ss.str();
 }
 
+std::string getReplay(const std::string& message){
+    std::string url = "http://localhost:8000/api/v1/ask";
+    FetchAPI api(url, 900, 300);
+    api.enableDebug();
+    api.insertHeader("Content-Type", "application/json");
+    api.setBody("{\"question\":\"" + message + "\"}");
+    bool success = api.post();
+    if (success){
+        JsonObject json(api.getPayload());
+        if (json["answer"].isAvailable()){
+            return json["answer"].getString();
+        }
+    }
+    return "Mohon maaf, saya lagi tidak bisa menjawab pertanyaan. Server lagi down.";
+}
+
+void updatesCallback(Telegram &telegram, void *ptr){
+    const NodeMessage *msg = telegram.message.getMessage();
+    while (msg){
+        msg->display();
+        if (ptr == nullptr){
+            telegram.apiSendChatAction(msg->room.id, Telegram::TYPING);
+            std::string reply = getReplay(msg->message);
+            telegram.apiSendMessage(msg->room.id, reply);
+        }
+        telegram.message.dequeue();
+        msg = telegram.message.getMessage();
+    }
+}
+
+void webhookRoutine(Telegram &telegram, const std::string &url){
+    telegram.setWebhookCallback(updatesCallback, nullptr);
+    telegram.apiSetWebhook(url);
+    telegram.servWebhook();
+}
+
+void getUpdatesRoutine(Telegram &telegram){
+    bool isClear = false;
+    unsigned short sleepPeriod = 10;
+    unsigned short pcounter = 0;
+    for (;;){
+        if (telegram.apiGetUpdates()){
+            updatesCallback(telegram, (void *) (!isClear));
+            isClear = true;
+            sleepPeriod = 3;
+            pcounter = 0;
+        }
+        else if (pcounter < 4){
+            pcounter++;
+        }
+        else if (sleepPeriod != 10) {
+            sleepPeriod = 10;
+        }
+        sleep(sleepPeriod);
+    }
+}
 
 int main(int argc, char **argv){
-    char *buffer = NULL;
     std::string dotenvPayload = readenv();
-    std::cout << "ENV Payload:" << std::endl;
-    std::cout << dotenvPayload << std::endl;
     JsonObject env(dotenvPayload);
     Telegram telegram(env["bot->token"].getString());
+    std::string webhookUrl = env["bot->webhook->url"].getString();
     if (telegram.apiGetMe()){
-        std::cout << "Telegram Bot Id: " << telegram.getId() << std::endl;
-        std::cout << "Telegram Bot Name: " << telegram.getName() << std::endl;
-        std::cout << "Telegram Bot Username: " << telegram.getUsername() << std::endl;
-        telegram.apigetUpdates();
-        const NodeMessage *msg = telegram.message.getMessage();
-        while (msg){
-            msg->display();
-            telegram.message.dequeue();
-            msg = telegram.message.getMessage();
+        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Id: %lli\n", telegram.getId());
+        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Name: %s\n", telegram.getName().c_str());
+        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Username: %s\n", telegram.getUsername().c_str());
+        if (webhookUrl.length() > 0){
+            webhookRoutine(telegram, webhookUrl);
         }
-        telegram.apiSendMessage(1030198712, "test");
+        else {
+            telegram.apiUnsetWebhook();
+            getUpdatesRoutine(telegram);
+        }
     }
     else {
-        std::cout << "Failed to access telegram" << std::endl;
+        debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "Failed to access telegram!\n");
     }
     return 0;
 }
