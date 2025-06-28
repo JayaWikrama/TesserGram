@@ -5,6 +5,16 @@
 #include "request.hpp"
 #include "json-parser.hpp"
 
+static const std::string ChatActionStr[] = {
+    "typing",
+    "upload_photo",
+    "record_video",
+    "upload_video",
+    "record_voice",
+    "upload_voice",
+    "upload_document"
+};
+
 bool Telegram::apiGetMe(){
     Request req(TELEGRAM_BASE_URL, this->token, Request::CONFIG);
     if (req.isSuccess()){
@@ -55,6 +65,16 @@ bool Telegram::apiGetUpdates(){
 bool Telegram::apiSendMessage(long long targetId, const std::string& message){
     std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"text\":\"" + message + "\"}";
     Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, data);
+    if (req.isSuccess()){
+        std::cout << "success" << std::endl;
+        return true;
+    }
+    return false;
+}
+
+bool Telegram::apiSendChatAction(long long targetId, Telegram::ChatAction_t action){
+    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"action\":\"" + ChatActionStr[action] + "\"}";
+    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_CHAT_ACTION, data);
     if (req.isSuccess()){
         std::cout << "success" << std::endl;
         return true;

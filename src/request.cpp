@@ -8,6 +8,7 @@ static const char *reqStr[] = {
     "getMe",
     "getUpdates",
     "sendMessage",
+    "sendChatAction",
     "sendPhoto",
     "sendAudio",
     "sendVideo",
