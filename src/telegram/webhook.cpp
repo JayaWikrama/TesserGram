@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstring>
+#include <thread>
 #include "telegram.hpp"
 #include "request.hpp"
 #include "json-parser.hpp"
@@ -16,6 +17,7 @@ static void webhookHandler(struct mg_connection *c, int ev, void *ev_data){
 
     struct mg_http_message *hm = (struct mg_http_message *) ev_data;
     std::string body(hm->body.buf, hm->body.len);
+    bool isThreadRun = (hook->message.getMessage() != nullptr);
     hook->message.enqueue(body);
 
     mg_http_reply(c, 200,
@@ -24,9 +26,11 @@ static void webhookHandler(struct mg_connection *c, int ev, void *ev_data){
         MG_ESC("status"), MG_ESC("success"),
         MG_ESC("data"), MG_ESC("message"), MG_ESC("message received"));
 
-    if (hook->webhookCallback){
+    if (hook->webhookCallback && isThreadRun == false){
         void *(*callback)(Telegram &, void *) = (void *(*)(Telegram &, void *))hook->webhookCallback;
-        callback(*hook, hook->webhookCallbackData);
+        std::thread([callback]() {
+            callback(*hook, hook->webhookCallbackData);
+        }).detach();
     }
 }
 

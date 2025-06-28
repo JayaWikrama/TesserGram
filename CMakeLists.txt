@@ -110,6 +110,11 @@ add_executable(${PROJECT_NAME}-inline-keyboard examples/inline-keyboard.cpp)
 target_link_libraries(${PROJECT_NAME}-inline-keyboard PRIVATE ${PROJECT_NAME}-lib)
 target_link_libraries(${PROJECT_NAME}-inline-keyboard PUBLIC -lpthread)
 
+## Media Example
+add_executable(${PROJECT_NAME}-media examples/media.cpp)
+target_link_libraries(${PROJECT_NAME}-media PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-media PUBLIC -lpthread)
+
 # Add test configuration (only when tests are enabled)
 if(BUILD_TESTS)
   add_executable(${PROJECT_NAME}-test test/test-sam-access.cpp)

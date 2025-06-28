@@ -10,7 +10,6 @@
 
 - Hide your telegram bot token on debuging
 
-📷 _Screenshot_
 ![Secure Debug](docs/images/secure-debug.png)
 
 ### 2. Basic Bot Functionality
@@ -64,7 +63,6 @@ if (telegram.apiGetUpdates()){
 ...
 ```
 
-📷 _How chat action (typing) looks like_
 ![Chat Action](docs/images/typing_chat_action.jpeg)
 
 ---
@@ -105,7 +103,6 @@ telegram.apiSendAudio(<chat_room>, "This the audio!", <audio_file>);
 ...
 ```
 
-📷 _Screenshot_
 ![Media](docs/images/send-media.jpeg)
 
 ---
@@ -125,7 +122,6 @@ telegram.apiSendKeyboard(<chat_room>, keyboard);
 ...
 ```
 
-📷 _Screenshot_
 ![Custom Keyboard](docs/images/keyboard.jpeg)
 
 ---
@@ -157,7 +153,6 @@ telegram.apiSendKeyboard(<chat_room>, keyboard);
 ...
 ```
 
-📷 _Screenshot/diagram here_  
 ![Inline Keyboard](docs/images/inline-keyboard.png)
 
 ---
@@ -280,10 +275,10 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 # Ensure TesserGram is built before the executable
-add_dependencies(${PROJECT_NAME} TesserGram-lib)
+add_dependencies(${PROJECT_NAME} tessergram-lib)
 
 # Link the executable with the library
-target_link_libraries(${PROJECT_NAME} PRIVATE TesserGram-lib)
+target_link_libraries(${PROJECT_NAME} PRIVATE tessergram-lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC -lpthread -lcurl)
 
 add_subdirectory(external/TesserGram EXCLUDE_FROM_ALL)
@@ -302,9 +297,9 @@ Save file by press `[Ctrl + o]` on your keyboard and then press `[Enter]`. After
 
 - The `$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/TesserGram/include>` command adds a reference to the header file location of the TesserGram Library. This ensures that during the build process, CMake can locate the TesserGram headers correctly.
 
-- The `add_dependencies(${PROJECT_NAME} TesserGram-lib)` command specifies that the TesserGram Library must be built before the main application. This ensures that the TesserGram Library is compiled before the main project depends on it.
+- The `add_dependencies(${PROJECT_NAME} tessergram-lib)` command specifies that the TesserGram Library must be built before the main application. This ensures that the TesserGram Library is compiled before the main project depends on it.
 
-- The `target_link_libraries(${PROJECT_NAME} PRIVATE TesserGram-lib)` command links the TesserGram Library to the main application as private libraries. This means that these libraries are used internally by the main project.
+- The `target_link_libraries(${PROJECT_NAME} PRIVATE tessergram-lib)` command links the TesserGram Library to the main application as private libraries. This means that these libraries are used internally by the main project.
 
 - The `add_subdirectory(external/TesserGram EXCLUDE_FROM_ALL)` command adds the external/TesserGram directory as part of the main project. The EXCLUDE_FROM_ALL option prevents CMake from building this subdirectory by default unless explicitly requested.
 
