@@ -34,6 +34,36 @@ bool TKeyboard::addButton(TKeyboard::TValueType_t type, const std::string &text,
     return true;
 }
 
+bool TKeyboard::addButton(const TKeyButtonConstructor_t &button){
+    return addButton(button.type, button.text,  button.value);
+}
+
+bool TKeyboard::addButton(const std::vector <TKeyButtonConstructor_t> &buttons){
+    if (this->type != TKeyboard::INLINE_KEYBOARD) return false;
+    size_t sz = buttons.size();
+    if (sz == 0) return false;
+    std::string result = "[";
+    sz--;
+    for (int i = 0; i < sz; i++){
+        if (buttons.at(i).type == TKeyboard::URL){
+            result += "{\"text\":\"" + buttons.at(i).text + "\",\"url\":\"" + buttons.at(i).value + "\"},";
+        }
+        else if (buttons.at(i).type == TKeyboard::CALLBACK_QUERY){
+            result += "{\"text\":\"" + buttons.at(i).text + "\",\"callback_data\":\"" + buttons.at(i).value + "\"},";
+        }
+        else return false;
+    }
+    if (buttons.at(sz).type == TKeyboard::URL){
+        result += "{\"text\":\"" + buttons.at(sz).text + "\",\"url\":\"" + buttons.at(sz).value + "\"},";
+    }
+    else if (buttons.at(sz).type == TKeyboard::CALLBACK_QUERY){
+        result += "{\"text\":\"" + buttons.at(sz).text + "\",\"callback_data\":\"" + buttons.at(sz).value + "\"}]";
+    }
+    else return false;
+    this->buttons.push_back(result);
+    return true;
+}
+
 const std::string& TKeyboard::getCaption() const {
     return this->caption;
 }
@@ -44,11 +74,10 @@ std::string TKeyboard::getMarkup() const {
     if (sz){
         result = this->type == TKeyboard::KEYBOARD ? "{\"keyboard\":[" : "{\"inline_keyboard\":[";
         sz--;
-        int i = 0;
-        for (i = 0; i < sz; i++){
+        for (int i = 0; i < sz; i++){
             result += this->buttons.at(i) + ",";
         }
-        result += this->buttons.at(i) + "]}";
+        result += this->buttons.at(sz) + "]}";
     }
     return result;
 }
