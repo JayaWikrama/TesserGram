@@ -63,8 +63,10 @@ bool Telegram::apiGetUpdates(){
 }
 
 bool Telegram::apiSendMessage(long long targetId, const std::string& message){
-    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"text\":\"" + message + "\"}";
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, data);
+    JsonBuilder json;
+    json["chat_id"] = targetId;
+    json["text"] = message;
+    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, json.dump());
     if (req.isSuccess()){
         std::cout << "success" << std::endl;
         return true;
