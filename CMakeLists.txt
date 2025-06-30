@@ -100,6 +100,11 @@ add_executable(${PROJECT_NAME} examples/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib)
 target_link_libraries(${PROJECT_NAME} PUBLIC -lpthread)
 
+## Send Message Example
+add_executable(${PROJECT_NAME}-send-message examples/send-message.cpp)
+target_link_libraries(${PROJECT_NAME}-send-message PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-send-message PUBLIC -lpthread)
+
 ## Keyboard Example
 add_executable(${PROJECT_NAME}-keyboard examples/keyboard.cpp)
 target_link_libraries(${PROJECT_NAME}-keyboard PRIVATE ${PROJECT_NAME}-lib)
