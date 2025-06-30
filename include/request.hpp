@@ -15,6 +15,7 @@ class Request {
             CONFIG = 0,
             UPDATES,
             SEND_MESSAGE,
+            EDIT_MESSAGE_TEXT,
             SEND_CHAT_ACTION,
             SEND_PHOTO,
             SEND_AUDIO,

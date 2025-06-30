@@ -177,6 +177,7 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams){
   if (this->debug){
     if (this->errorCode == FetchAPI::FETCH_OK){
       this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request to %s success\n", fullUrl.str().c_str());
+      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
     else {
       this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "GET request to %s failed [%s]\n", fullUrl.str().c_str(), this->errorMsg.c_str());
@@ -251,6 +252,7 @@ bool FetchAPI::post() {
   if (this->debug){
     if (this->errorCode == FetchAPI::FETCH_OK){
       this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s success\n", this->url.c_str());
+      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
     else {
       this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "POST request to %s failed [%s]\n", this->url.c_str(), this->errorMsg.c_str());

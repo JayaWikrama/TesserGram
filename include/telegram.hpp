@@ -119,6 +119,7 @@ class Telegram {
         bool apiGetMe();
         bool apiGetUpdates();
         bool apiSendMessage(long long targetId, const std::string& message);
+        bool apiEditMessageText(long long targetId, long long messageId, const std::string& message);
         bool apiSendChatAction(long long targetId, ChatAction_t action);
 
         bool apiSendDocument(long long targetId, const std::string& label, const std::string& filePath);
@@ -137,6 +138,7 @@ class Telegram {
         void servWebhook();
 
         bool apiSendKeyboard(long long targetId, const TKeyboard &keyboard);
+        bool apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard);
 };
 
 #endif
