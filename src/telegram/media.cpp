@@ -45,13 +45,29 @@ static std::string getMimeType(const std::string& filename) {
     return "text/plain";
 }
 
-bool Telegram::__apiSendMedia(long long targetId, Request::REQUEST_t type, const std::string& label, const std::string& filePath){
+bool Telegram::__apiSendMedia(long long targetId, Telegram::MediaType_t type, const std::string& label, const std::string& filePath){
     std::string rtype = "document";
-    if (type == Request::SEND_PHOTO) rtype = "photo";
-    else if (type == Request::SEND_AUDIO) rtype = "audio";
-    else if (type == Request::SEND_VOICE) rtype = "voice";
-    else if (type == Request::SEND_ANIMATION) rtype = "animation";
-    else if (type == Request::SEND_VIDEO) rtype = "video";
+    Request::REQUEST_t raction = Request::SEND_DOCUMENT;
+    if (type == Telegram::PHOTO) {
+        rtype = "photo";
+        raction = Request::SEND_PHOTO;
+    }
+    else if (type == Telegram::AUDIO) {
+        rtype = "audio";
+        raction = Request::SEND_AUDIO;
+    }
+    else if (type == Telegram::VOICE) {
+        rtype = "voice";
+        raction = Request::SEND_VOICE;
+    }
+    else if (type == Telegram::ANIMATION) {
+        rtype = "animation";
+        raction = Request::SEND_ANIMATION;
+    }
+    else if (type == Telegram::VIDEO) {
+        rtype = "video";
+        raction = Request::SEND_VIDEO;
+    }
     JsonBuilder mimeArray = {
         {{"name", "chat_id"}, {"is_file", false}, {"data", std::to_string(targetId)}},
         {{"name", "caption"}, {"is_file", false}, {"data", label}},
@@ -59,7 +75,7 @@ bool Telegram::__apiSendMedia(long long targetId, Request::REQUEST_t type, const
     };
     JsonBuilder data;
     data["mime"] = mimeArray;
-    Request req(TELEGRAM_BASE_URL, this->token, type, data);
+    Request req(TELEGRAM_BASE_URL, this->token, raction, data);
     if (req.isSuccess()){
         std::cout << "success" << std::endl;
         return true;
@@ -68,21 +84,21 @@ bool Telegram::__apiSendMedia(long long targetId, Request::REQUEST_t type, const
 }
 
 bool Telegram::apiSendDocument(long long targetId, const std::string& label, const std::string& filePath){
-    return this->__apiSendMedia(targetId, Request::SEND_DOCUMENT, label, filePath);
+    return this->__apiSendMedia(targetId, Telegram::DOCUMENT, label, filePath);
 }
 
 bool Telegram::apiSendPhoto(long long targetId, const std::string& label, const std::string& filePath){
-    return this->__apiSendMedia(targetId, Request::SEND_PHOTO, label, filePath);
+    return this->__apiSendMedia(targetId, Telegram::PHOTO, label, filePath);
 }
 bool Telegram::apiSendAudio(long long targetId, const std::string& label, const std::string& filePath){
-    return this->__apiSendMedia(targetId, Request::SEND_AUDIO, label, filePath);
+    return this->__apiSendMedia(targetId, Telegram::AUDIO, label, filePath);
 }
 bool Telegram::apiSendVoice(long long targetId, const std::string& label, const std::string& filePath){
-    return this->__apiSendMedia(targetId, Request::SEND_VOICE, label, filePath);
+    return this->__apiSendMedia(targetId, Telegram::VOICE, label, filePath);
 }
 bool Telegram::apiSendAnimation(long long targetId, const std::string& label, const std::string& filePath){
-    return this->__apiSendMedia(targetId, Request::SEND_ANIMATION, label, filePath);
+    return this->__apiSendMedia(targetId, Telegram::ANIMATION, label, filePath);
 }
 bool Telegram::apiSendVideo(long long targetId, const std::string& label, const std::string& filePath){
-    return this->__apiSendMedia(targetId, Request::SEND_VIDEO, label, filePath);
+    return this->__apiSendMedia(targetId, Telegram::VIDEO, label, filePath);
 }

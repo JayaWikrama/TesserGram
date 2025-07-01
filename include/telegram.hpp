@@ -3,7 +3,6 @@
 
 #include <string>
 #include <vector>
-#include "request.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
 
@@ -86,17 +85,7 @@ class Messages {
 };
 
 class Telegram {
-    private:
-        long long id;
-        long long lastUpdateId;
-        std::string name;
-        std::string username;
-        std::string token;
-
-        bool __apiSendMedia(long long targetId, Request::REQUEST_t type, const std::string& label, const std::string& filePath);
-
     public:
-
         typedef enum _ChatAction_t {
             TYPING = 0,
             UPLOAD_PHOTO,
@@ -106,6 +95,15 @@ class Telegram {
             UPLOAD_VOICE,
             UPLOAD_DOCUMENT
         } ChatAction_t;
+
+        typedef enum _MediaType_t {
+            PHOTO = 0,
+            AUDIO,
+            VOICE,
+            ANIMATION,
+            VIDEO,
+            DOCUMENT
+        } MediaType_t;
 
         Messages message;
         void *webhookCallback;
@@ -139,6 +137,15 @@ class Telegram {
 
         bool apiSendKeyboard(long long targetId, const TKeyboard &keyboard);
         bool apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard);
+
+    private:
+        long long id;
+        long long lastUpdateId;
+        std::string name;
+        std::string username;
+        std::string token;
+
+        bool __apiSendMedia(long long targetId, MediaType_t type, const std::string& label, const std::string& filePath);
 };
 
 #endif

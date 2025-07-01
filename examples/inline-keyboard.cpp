@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include "telegram.hpp"
 #include "debug.hpp"
+#include "json-parser.hpp"
 
 Debug debug(10);
 
