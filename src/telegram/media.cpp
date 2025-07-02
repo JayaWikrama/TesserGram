@@ -7,6 +7,7 @@
 #include "telegram.hpp"
 #include "request.hpp"
 #include "json-parser.hpp"
+#include "debug.hpp"
 
 static std::string getFileExtension(const std::string& filename) {
     size_t dotPos = filename.find_last_of('.');
@@ -77,7 +78,10 @@ bool Telegram::__apiSendMedia(long long targetId, Telegram::MediaType_t type, co
     data["mime"] = mimeArray;
     Request req(TELEGRAM_BASE_URL, this->token, raction, data);
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;

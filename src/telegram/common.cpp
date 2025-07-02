@@ -1,6 +1,7 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstring>
+#include "debug.hpp"
 #include "telegram.hpp"
 #include "json-parser.hpp"
 
@@ -39,7 +40,7 @@ NodeMessage::NodeMessage(const std::string& message){
 
 void NodeMessage::display() const {
     struct tm dtime;
-    char dtimestr[20];
+    char dtimestr[64];
     memcpy(&dtime, localtime(&(this->time)), sizeof(dtime));
     sprintf(dtimestr,
             "%04d-%02d-%02d %02d:%02d:%02d",
@@ -51,13 +52,14 @@ void NodeMessage::display() const {
             dtime.tm_sec
         );
     dtimestr[19] = 0x00;
-    std::cout << "Update ID   : " << this->updateId << " [" << dtimestr << "]:" << std::endl;
-    std::cout << "  Type      : " << (this->type == NodeMessage::MESSAGE ? "message" : "callback_query") << std::endl;
-    std::cout << "  id        : " << this->id << std::endl;
-    std::cout << "  Sender    : " << this->sender.name << std::endl;
-    std::cout << "  Room Id   : " << this->room.id << std::endl;
-    std::cout << "  Room Name : " << this->room.title << std::endl;
-    std::cout << "  Message   : " << this->message << std::endl;
+    Debug debug(0);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Type      : %s\n", (this->type == NodeMessage::MESSAGE ? "message" : "callback_query"));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  id        : %lli\n", this->id);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", this->sender.name);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Id   : %lli\n", this->room.id);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", this->room.title);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", this->message);
 }
 
 void Messages::enqueue(const std::string& message){
@@ -74,7 +76,8 @@ void Messages::enqueue(const std::string& message){
         }
         this->end = msg;
     } catch (const std::runtime_error& e) {
-        std::cerr << "Caught runtime_error: " << e.what() << std::endl;
+        Debug debug(0);
+        debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "Caught runtime_error: %s\n", e.what());
     }
 }
 
@@ -112,10 +115,14 @@ Telegram::Telegram(const std::string &token){
     this->username = "";
     this->token = token;
     this->webhookCallback = nullptr;
+    this->debug = nullptr;
 }
 
 Telegram::~Telegram(){
-
+    if (this->debug){
+        Debug *dbg = (Debug *) this->debug;
+        delete (dbg);
+    }
 }
 
 long long Telegram::getId(){
@@ -128,4 +135,31 @@ const std::string& Telegram::getName() const{
 
 const std::string& Telegram::getUsername() const{
     return this->username;
+}
+
+void Telegram::enableDebug(){
+    this->debug = (Debug_t) new Debug(0);
+}
+
+void Telegram::enableDebug(const std::string &confidential){
+    Debug *dbg = new Debug(100);
+    dbg->setConfidential(confidential);
+    this->debug = (Debug_t) dbg;
+}
+
+void Telegram::enableDebug(const std::vector <std::string> &confidential){
+    Debug *dbg = new Debug(100);
+    for (int i = 0; i < confidential.size(); i++)  dbg->setConfidential(confidential.at(i));
+    this->debug = (Debug_t) dbg;
+}
+
+void Telegram::disableDebug(){
+    Debug *dbg = (Debug *) this->debug;
+    if (dbg == nullptr) return;
+    delete (dbg);
+    this->debug = nullptr;
+}
+
+bool Telegram::isDebugEnable(){
+  return (this->debug != nullptr);
 }

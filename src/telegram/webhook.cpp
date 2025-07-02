@@ -5,6 +5,7 @@
 #include "telegram.hpp"
 #include "request.hpp"
 #include "json-parser.hpp"
+#include "debug.hpp"
 
 extern "C" {
     #include "mongoose.h"
@@ -42,7 +43,10 @@ bool Telegram::apiSetWebhook(const std::string& url, const std::string& secretTo
     if (maxConnection > 0) json["max_connections"] = maxConnection;
     Request req(TELEGRAM_BASE_URL, this->token, Request::SET_WEBHOOK, json.dump());
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;
@@ -63,7 +67,10 @@ bool Telegram::apiSetWebhook(const std::string& url){
 bool Telegram::apiUnsetWebhook(){
     Request req(TELEGRAM_BASE_URL, this->token, Request::UNSET_WEBHOOK, std::string("{\"drop_pending_updates\":true}"));
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;

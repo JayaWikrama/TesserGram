@@ -27,6 +27,7 @@ int main(int argc, char **argv){
     std::string dotenvPayload = readenv();
     JsonObject env(dotenvPayload);
     Telegram telegram(env["bot->token"].getString());
+    telegram.enableDebug();
     if (telegram.apiGetMe()){
         debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Id: %lli\n", telegram.getId());
         debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Name: %s\n", telegram.getName().c_str());

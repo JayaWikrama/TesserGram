@@ -6,6 +6,8 @@
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
 
+typedef void * Debug_t;
+
 class TKeyboard {
     public:
         typedef enum _TKeyType_t {
@@ -114,6 +116,12 @@ class Telegram {
         const std::string& getName() const;
         const std::string& getUsername() const;
 
+        void enableDebug();
+        void enableDebug(const std::string &confidential);
+        void enableDebug(const std::vector <std::string> &confidential);
+        void disableDebug();
+        bool isDebugEnable();
+
         bool apiGetMe();
         bool apiGetUpdates();
         bool apiSendMessage(long long targetId, const std::string& message);
@@ -144,6 +152,7 @@ class Telegram {
         std::string name;
         std::string username;
         std::string token;
+        Debug_t debug;
 
         bool __apiSendMedia(long long targetId, MediaType_t type, const std::string& label, const std::string& filePath);
 };

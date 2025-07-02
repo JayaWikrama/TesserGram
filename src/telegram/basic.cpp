@@ -4,6 +4,7 @@
 #include "telegram.hpp"
 #include "request.hpp"
 #include "json-parser.hpp"
+#include "debug.hpp"
 
 static const std::string ChatActionStr[] = {
     "typing",
@@ -68,7 +69,10 @@ bool Telegram::apiSendMessage(long long targetId, const std::string& message){
     json["text"] = message;
     Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, json.dump());
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;
@@ -81,7 +85,10 @@ bool Telegram::apiEditMessageText(long long targetId, long long messageId, const
     json["text"] = message;
     Request req(TELEGRAM_BASE_URL, this->token, Request::EDIT_MESSAGE_TEXT, json.dump());
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;
@@ -91,7 +98,10 @@ bool Telegram::apiSendChatAction(long long targetId, Telegram::ChatAction_t acti
     std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"action\":\"" + ChatActionStr[action] + "\"}";
     Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_CHAT_ACTION, data);
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;

@@ -85,6 +85,7 @@ int main(int argc, char **argv){
     std::string dotenvPayload = readenv();
     JsonObject env(dotenvPayload);
     Telegram telegram(env["bot->token"].getString());
+    telegram.enableDebug();
     std::string webhookUrl = env["bot->webhook->url"].getString();
     if (telegram.apiGetMe()){
         debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Id: %lli\n", telegram.getId());

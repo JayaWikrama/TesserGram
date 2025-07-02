@@ -128,10 +128,12 @@ void Debug::log(Debug::LogType_t type, const char* functionName, const char* for
 
     std::cout << logEntry;
 
-    if (this->history.size() >= this->maxLineLogs){
-        this->history.erase(this->history.begin());
+    if (this->maxLineLogs > 0){
+        if (this->history.size() >= this->maxLineLogs){
+            this->history.erase(this->history.begin());
+        }
+        this->history.push_back(logEntry);
     }
-    this->history.push_back(logEntry);
     pthread_mutex_unlock(&(this->mutex));
 }
 

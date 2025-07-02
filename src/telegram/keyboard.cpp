@@ -4,6 +4,7 @@
 #include "telegram.hpp"
 #include "request.hpp"
 #include "json-parser.hpp"
+#include "debug.hpp"
 
 TKeyboard::TKeyboard(TKeyboard::TKeyType_t type, const std::string &caption){
     this->type = type;
@@ -85,13 +86,19 @@ std::string TKeyboard::getMarkup() const {
 bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard){
     std::string replayMarkup = keyboard.getMarkup();
     if (replayMarkup.length() == 0){
-        std::cout << "invalid keyboard!" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::ERROR, __PRETTY_FUNCTION__, "invalid keyboard!\n");
+        }
         return false;
     }
     std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"text\":\"" + keyboard.getCaption() + "\",\"reply_markup\":" + replayMarkup + "}";
     Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, data);
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;
@@ -100,13 +107,19 @@ bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard){
 bool Telegram::apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard){
     std::string replayMarkup = keyboard.getMarkup();
     if (replayMarkup.length() == 0){
-        std::cout << "invalid keyboard!" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::ERROR, __PRETTY_FUNCTION__, "invalid keyboard!\n");
+        }
         return false;
     }
     std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"message_id\":" + std::to_string(messageId) + ",\"text\":\"" + keyboard.getCaption() + "\",\"reply_markup\":" + replayMarkup + "}";
     Request req(TELEGRAM_BASE_URL, this->token, Request::EDIT_MESSAGE_TEXT, data);
     if (req.isSuccess()){
-        std::cout << "success" << std::endl;
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
         return true;
     }
     return false;
