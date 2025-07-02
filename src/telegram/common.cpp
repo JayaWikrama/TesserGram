@@ -56,10 +56,10 @@ void NodeMessage::display() const {
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Type      : %s\n", (this->type == NodeMessage::MESSAGE ? "message" : "callback_query"));
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  id        : %lli\n", this->id);
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", this->sender.name);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", this->sender.name.c_str());
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Id   : %lli\n", this->room.id);
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", this->room.title);
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", this->message);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", this->room.title.c_str());
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", this->message.c_str());
 }
 
 void Messages::enqueue(const std::string& message){
