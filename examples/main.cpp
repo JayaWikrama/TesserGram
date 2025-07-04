@@ -45,9 +45,16 @@ void updatesCallback(Telegram &telegram, void *ptr){
     while (msg){
         msg->display();
         if (ptr == nullptr){
-            telegram.apiSendChatAction(msg->room.id, Telegram::TYPING);
-            std::string reply = getReplay(msg->message);
-            telegram.apiSendMessage(msg->room.id, reply);
+            if (msg->message){
+                telegram.apiSendChatAction(msg->message->chat.id, Telegram::TYPING);
+                std::string reply = getReplay(msg->message->text);
+                telegram.apiSendMessage(msg->message->chat.id, reply);
+            }
+            else {
+                telegram.apiSendChatAction(msg->callbackQuery->message->chat.id, Telegram::TYPING);
+                std::string reply = getReplay(msg->callbackQuery->data);
+                telegram.apiSendMessage(msg->callbackQuery->message->chat.id, reply);
+            }
         }
         telegram.message.dequeue();
         msg = telegram.message.getMessage();
