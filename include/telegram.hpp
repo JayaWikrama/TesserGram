@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "type.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
 
@@ -44,27 +45,9 @@ class TKeyboard {
 
 class NodeMessage {
     public:
-        typedef enum _updateType_t {
-            MESSAGE = 0,
-            CALLBACK_QUERY = 1
-        } updateType_t;
-        updateType_t type;
-        time_t time;
         long long updateId;
-        long long callbackId;
-        long long id;
-        struct Sender_t {
-            bool isBot;
-            long long id;
-            std::string name;
-            std::string username;
-        } sender;
-        struct ChatRoom_t {
-            long long id;
-            std::string title;
-            std::string type;
-        } room;
-        std::string message;
+        CallbackQuery *callbackQuery;
+        Message *message;
         NodeMessage *next;
         
         NodeMessage(const std::string& message);

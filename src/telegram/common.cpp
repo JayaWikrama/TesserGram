@@ -2,38 +2,32 @@
 #include <iostream>
 #include <cstring>
 #include "debug.hpp"
-#include "telegram.hpp"
 #include "json-parser.hpp"
+#include "telegram.hpp"
 
 NodeMessage::NodeMessage(const std::string& message){
     JsonObject json(message);
     JsonObject jmessage;
+    this->callbackQuery = nullptr;
+    this->message = nullptr;
     if (json["update_id"].isAvailable() == false) throw std::runtime_error("Invalid input: " + message + "!");
     this->updateId = std::stoll(json["update_id"].getString());
     if (json["callback_query"].isAvailable()){
-        this->callbackId = std::stoll(json["callback_query->id"].getString());
-        this->message = json["callback_query->data"].getString();
-        this->type = NodeMessage::CALLBACK_QUERY;
-        jmessage.parse(json["callback_query->message"].getString());
+        this->callbackQuery = new CallbackQuery();
+        if (this->callbackQuery->parse(json["callback_query"].getString()) == false){
+            delete this->callbackQuery;
+            this->callbackQuery = nullptr;
+        }
     }
-    else {
-        this->message = json["message->text"].getString();
-        this->type = NodeMessage::MESSAGE;
-        jmessage.parse(json["message"].getString());
+    else if (json["message"].isAvailable()){
+        this->message = new Message();
+        if (this->message->parse(json["message"].getString()) == false){
+            delete this->message;
+            this->message = nullptr;
+        }
     }
-    this->id = std::stoll(jmessage["message_id"].getString());
-    this->time = jmessage["date"].isAvailable() ? static_cast<time_t>(std::stoll(jmessage["date"].getString())) : 0;
-    this->sender.id = jmessage["from->id"].isAvailable() ? std::stoll(jmessage["from->id"].getString()) : 0;
-    this->room.id = jmessage["chat->id"].isAvailable() ? std::stoll(jmessage["chat->id"].getString()) : 0;
-    this->sender.isBot = (jmessage["from->is_bot"].getString() == "true" ? true : false);
-    this->sender.name = jmessage["from->first_name"].getString();
-    this->sender.username = jmessage["from->username"].getString();
-    this->room.type = jmessage["chat->type"].getString();
-    if (this->room.type == "private"){
-        this->room.title = jmessage["chat->first_name"].getString();
-    }
-    else {
-        this->room.title = jmessage["chat->title"].getString();
+    if (this->message == nullptr && this->callbackQuery == nullptr){
+        throw std::runtime_error("Unknown type: " + message + "!");
     }
     this->next = nullptr;
 }
@@ -41,7 +35,13 @@ NodeMessage::NodeMessage(const std::string& message){
 void NodeMessage::display() const {
     struct tm dtime;
     char dtimestr[64];
-    memcpy(&dtime, localtime(&(this->time)), sizeof(dtime));
+    if (this->callbackQuery){
+        time_t ctime = time(nullptr);
+        memcpy(&dtime, localtime(&ctime), sizeof(dtime));
+    }
+    else {
+        memcpy(&dtime, localtime(&(this->message->dtime)), sizeof(dtime));
+    }
     sprintf(dtimestr,
             "%04d-%02d-%02d %02d:%02d:%02d",
             dtime.tm_year + 1900,
@@ -54,12 +54,12 @@ void NodeMessage::display() const {
     dtimestr[19] = 0x00;
     Debug debug(0);
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Type      : %s\n", (this->type == NodeMessage::MESSAGE ? "message" : "callback_query"));
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  id        : %lli\n", this->id);
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", this->sender.name.c_str());
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Id   : %lli\n", this->room.id);
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", this->room.title.c_str());
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", this->message.c_str());
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Type      : %s\n", (this->callbackQuery == nullptr ? "message" : "callback_query"));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  id        : %lli\n", (this->message ? this->message->id : this->callbackQuery->id));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", (this->message ? this->message->from.username.c_str() : this->callbackQuery->message->from.username.c_str()));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Id   : %lli\n", (this->message ? this->message->chat.id : this->callbackQuery->message->chat.id));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", (this->message ? this->message->chat.title.c_str() : this->callbackQuery->message->chat.title.c_str()));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", (this->message ? this->message->text.c_str() : this->callbackQuery->data.c_str()));
 }
 
 void Messages::enqueue(const std::string& message){
