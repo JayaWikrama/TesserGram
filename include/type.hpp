@@ -1,5 +1,5 @@
-#ifndef __UPDATES_HPP__
-#define __UPDATES_HPP__
+#ifndef __TYPE_HPP__
+#define __TYPE_HPP__
 
 #include <string>
 #include <ctime>
@@ -15,6 +15,7 @@ class User {
 
         User();
         ~User();
+        bool parse(const std::string &json);
 };
 
 class Chat {
@@ -30,13 +31,14 @@ class Chat {
         TYPE_t type;
         long long id;
         std::string title;
-        std::string username;
         std::string firstName;
         std::string lastName;
         std::string username;
 
         Chat();
-}
+        ~Chat();
+        bool parse(const std::string &json);
+};
 
 class Media {
     public:
@@ -57,10 +59,12 @@ class Media {
         long long fileSize;
         std::string fileId;
         std::string fileUniqueId;
-        std::strimg fileName;
+        std::string fileName;
 
         Media();
-}
+        ~Media();
+        bool parse(TYPE_t type, const std::string &json);
+};
 
 class Message {
     public:
@@ -71,11 +75,25 @@ class Message {
         std::string caption;
         User from;
         Chat chat;
-        Message *message;
+        Message *replyToMessage;
         Media *media;
 
         Message();
         ~Message();
-}
+        bool parse(const std::string &json);
+};
+
+class CallbackQuery {
+    public:
+        long long id;
+        std::string chatInstance;
+        std::string data;
+        User from;
+        Message *message;
+
+        CallbackQuery();
+        ~CallbackQuery();
+        bool parse(const std::string &json);
+};
 
 #endif
