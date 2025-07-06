@@ -10,6 +10,7 @@ static const char *reqStr[] = {
     "sendMessage",
     "editMessageText",
     "sendChatAction",
+    "getFile",
     "sendPhoto",
     "sendAudio",
     "sendVideo",

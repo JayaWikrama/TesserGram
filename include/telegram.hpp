@@ -117,6 +117,7 @@ class Telegram {
         bool apiSendVoice(long long targetId, const std::string& label, const std::string& filePath);
         bool apiSendAnimation(long long targetId, const std::string& label, const std::string& filePath);
         bool apiSendVideo(long long targetId, const std::string& label, const std::string& filePath);
+        std::string apiGetMediaPath(const std::string& fileId);
 
         bool apiSetWebhook(const std::string& url, const std::string& secretToken, const std::string& allowedUpdates, unsigned short maxConnection);
         bool apiSetWebhook(const std::string& url, const std::string& secretToken, const std::string& allowedUpdates);

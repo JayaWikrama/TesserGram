@@ -17,6 +17,7 @@ class Request {
             SEND_MESSAGE,
             EDIT_MESSAGE_TEXT,
             SEND_CHAT_ACTION,
+            GET_MEDIA_PATH,
             SEND_PHOTO,
             SEND_AUDIO,
             SEND_VIDEO,

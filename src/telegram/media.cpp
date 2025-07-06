@@ -106,3 +106,18 @@ bool Telegram::apiSendAnimation(long long targetId, const std::string& label, co
 bool Telegram::apiSendVideo(long long targetId, const std::string& label, const std::string& filePath){
     return this->__apiSendMedia(targetId, Telegram::VIDEO, label, filePath);
 }
+
+std::string Telegram::apiGetMediaPath(const std::string& fileId){
+    JsonBuilder data;
+    data["file_id"] = fileId;
+    Request req(TELEGRAM_BASE_URL, this->token, Request::GET_MEDIA_PATH, data.dump());
+    if (req.isSuccess()){
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
+        JsonObject json(req.getResponse());
+        return json["result->file_path"].getString();
+    }
+    return "";
+}
