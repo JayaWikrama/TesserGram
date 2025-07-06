@@ -1,6 +1,24 @@
 #include "json-parser.hpp"
 #include "type.hpp"
 
+struct MediaTypeEntry {
+    Media::TYPE_t type;
+    const char* key;
+};
+
+static const MediaTypeEntry mediaTypes[] = {
+    {Media::DOCUMENT, "document"},
+    {Media::PHOTO, "photo"},
+    {Media::ANIMATION, "animation"},
+    {Media::STICKER, "sticker"},
+    {Media::STORY, "story"},
+    {Media::VIDEO, "video"},
+    {Media::VIDEO_NOTE, "video_note"},
+    {Media::VOICE, "voice"},
+    {Media::AUDIO, "audio"},
+    {Media::CONTACT, "contact"}
+};
+
 User::User(){
     this->isBot = false;
     this->id = 0;
@@ -76,17 +94,22 @@ bool Media::parse(TYPE_t type, const std::string &json){
     return (this->fileId.length() != 0);
 }
 
+const std::string Media::getType(){
+    for (const auto& entry : mediaTypes) {
+        if (entry.type == this->type) return std::string(entry.key);
+    }
+    return "unknown";
+}
+
 Message::Message(){
     this->dtime = 0;
     this->id = 0;
     this->threadId = 0;
     this->replyToMessage = nullptr;
-    this->media = nullptr;
 }
 
 Message::~Message(){
     if (this->replyToMessage) delete this->replyToMessage;
-    if (this->media) delete this->media;
 }
 
 bool Message::parse(const std::string &json){
@@ -106,74 +129,24 @@ bool Message::parse(const std::string &json){
             this->replyToMessage = nullptr;
         }
     }
-    if (j["document"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::DOCUMENT, j["document"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["photo"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::PHOTO, j["photo"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["animation"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::ANIMATION, j["animation"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["sticker"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::STICKER, j["sticker"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["story"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::STORY, j["story"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["video"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::VIDEO, j["video"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["video_note"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::VIDEO_NOTE, j["video_note"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["voice"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::VOICE, j["voice"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["audio"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::AUDIO, j["audio"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
-        }
-    }
-    else if (j["contact"].isAvailable()){
-        this->media = new Media();
-        if (this->media->parse(Media::CONTACT, j["contact"].getString()) == false){
-            delete this->media;
-            this->media = nullptr;
+
+    for (const auto& entry : mediaTypes) {
+        if (j[entry.key].isAvailable()) {
+            if (j[entry.key].getType() == "array"){
+                int arrayLength = j[entry.key].getArraySize();
+                for (int i = 0; i < arrayLength; i++) {
+                    Media md;
+                    if (md.parse(entry.type, j[std::string(entry.key) + "[" + std::to_string(i) + "]"].getString())){
+                        this->media.push_back(md);
+                    }
+                }
+            }
+            else {
+                Media md;
+                if (md.parse(entry.type, j[entry.key].getString())){
+                    this->media.push_back(md);
+                }
+            }
         }
     }
     return (this->id != 0);

@@ -55,11 +55,28 @@ void NodeMessage::display() const {
     Debug debug(0);
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Type      : %s\n", (this->callbackQuery == nullptr ? "message" : "callback_query"));
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  id        : %lli\n", (this->message ? this->message->id : this->callbackQuery->id));
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Id        : %lli\n", (this->message ? this->message->id : this->callbackQuery->id));
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", (this->message ? this->message->from.username.c_str() : this->callbackQuery->message->from.username.c_str()));
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Id   : %lli\n", (this->message ? this->message->chat.id : this->callbackQuery->message->chat.id));
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", (this->message ? this->message->chat.title.c_str() : this->callbackQuery->message->chat.title.c_str()));
-    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", (this->message ? this->message->text.c_str() : this->callbackQuery->data.c_str()));
+    if (this->message){
+        if (this->message->text.length()){
+            debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", this->message->text.c_str());
+        }
+        if (this->message->media.size() == 1){
+            debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Media T   : %s\n", this->message->media.at(0).getType().c_str());
+            debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Media Id  : %s\n", this->message->media.at(0).fileId.c_str());
+        }
+        else if (this->message->media.size() > 1){
+            debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Media T   : %s\n", this->message->media.at(0).getType().c_str());
+            for (int i = 0; i < this->message->media.size(); i++){
+                debug.log(Debug::INFO, __PRETTY_FUNCTION__, "    M.id[%d] : %s\n", i, this->message->media.at(i).fileId.c_str());
+            }
+        }
+    }
+    else {
+        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Data      : %s\n", this->callbackQuery->data.c_str());
+    }
 }
 
 void Messages::enqueue(const std::string& message){

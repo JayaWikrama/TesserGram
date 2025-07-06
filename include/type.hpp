@@ -2,6 +2,7 @@
 #define __TYPE_HPP__
 
 #include <string>
+#include <vector>
 #include <ctime>
 
 class User {
@@ -64,6 +65,7 @@ class Media {
         Media();
         ~Media();
         bool parse(TYPE_t type, const std::string &json);
+        const std::string getType();
 };
 
 class Message {
@@ -75,8 +77,8 @@ class Message {
         std::string caption;
         User from;
         Chat chat;
+        std::vector <Media> media;
         Message *replyToMessage;
-        Media *media;
 
         Message();
         ~Message();
