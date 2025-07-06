@@ -2,6 +2,7 @@
 #define __FETCH_API_HPP__
 
 #include <string>
+#include <vector>
 #include <map>
 #include <pthread.h>
 #include "debug.hpp"
@@ -35,6 +36,7 @@ class FetchAPI {
     Debug *debug;
 
     static size_t writeCallback(void *contents, size_t size, size_t nmemb, std::string *s);
+    static size_t downloadCallback(void *contents, size_t size, size_t nmemb, std::vector<unsigned char> *v);
     void reset();
 
   public:
@@ -54,6 +56,7 @@ class FetchAPI {
     bool get(const std::map<std::string, std::string> &params = {});
     bool post();
     bool sendFile();
+    bool download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params = {});
 
     std::string getPayload();
     std::string getError();

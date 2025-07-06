@@ -121,3 +121,27 @@ std::string Telegram::apiGetMediaPath(const std::string& fileId){
     }
     return "";
 }
+
+std::vector <unsigned char> Telegram::apiDownloadMediaById(const std::string& fileId){
+    std::vector <unsigned char> result;
+    Request req(TELEGRAM_BASE_URL, this->token, Request::DOWNLOAD_MEDIA_BY_FILE_ID, fileId, result);
+    if (req.isSuccess()){
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
+    }
+    return result;
+}
+
+std::vector <unsigned char> Telegram::apiDownloadMediaByPath(const std::string& mediaPath){
+    std::vector <unsigned char> result;
+    Request req(TELEGRAM_BASE_URL, this->token, Request::DOWNLOAD_MEDIA_BY_PATH, mediaPath, result);
+    if (req.isSuccess()){
+        if (this->debug){
+            Debug *dbg = (Debug *) this->debug;
+            dbg->log(Debug::INFO, __PRETTY_FUNCTION__, "success\n");
+        }
+    }
+    return result;
+}

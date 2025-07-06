@@ -24,6 +24,19 @@ std::string readenv() {
     return ss.str();
 }
 
+
+bool writeBinaryFile(const std::string& filename, const std::vector<unsigned char>& data) {
+    std::ofstream file(filename, std::ios::out | std::ios::binary);
+    if (!file) {
+        return false;
+    }
+
+    file.write(reinterpret_cast<const char*>(data.data()), data.size());
+    file.close();
+
+    return file.good();
+}
+
 std::string getReplay(const std::string& message){
     std::string url = "http://localhost:8000/api/v1/ask";
     FetchAPI api(url, 900, 300);
@@ -40,6 +53,14 @@ std::string getReplay(const std::string& message){
     return "Mohon maaf, saya lagi tidak bisa menjawab pertanyaan. Server lagi down.";
 }
 
+void processMedia(Telegram &telegram, const std::vector<Media> &media){
+    if (media.size() == 0) return;
+    std::string path = telegram.apiGetMediaPath(media.at(media.size() - 1).fileId);
+    debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Media path of \"%s\": %s\n", media.at(media.size() - 1).fileId.c_str(), path.c_str());
+    std::vector <unsigned char> mediaPayload = telegram.apiDownloadMediaByPath(path);
+    writeBinaryFile(path, mediaPayload);
+}
+
 void updatesCallback(Telegram &telegram, void *ptr){
     const NodeMessage *msg = telegram.message.getMessage();
     while (msg){
@@ -47,8 +68,11 @@ void updatesCallback(Telegram &telegram, void *ptr){
         if (ptr == nullptr){
             if (msg->message){
                 telegram.apiSendChatAction(msg->message->chat.id, Telegram::TYPING);
-                std::string reply = getReplay(msg->message->text);
-                telegram.apiSendMessage(msg->message->chat.id, reply);
+                if (msg->message->text.length() > 0){
+                    std::string reply = getReplay(msg->message->text);
+                    telegram.apiSendMessage(msg->message->chat.id, reply);
+                }
+                processMedia(telegram, msg->message->media);
             }
             else {
                 telegram.apiSendChatAction(msg->callbackQuery->message->chat.id, Telegram::TYPING);

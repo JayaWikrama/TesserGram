@@ -90,6 +90,12 @@ size_t FetchAPI::writeCallback(void *contents, size_t size, size_t nmemb, std::s
   return totalSize;
 }
 
+size_t FetchAPI::downloadCallback(void *contents, size_t size, size_t nmemb, std::vector<unsigned char> *v){
+  size_t totalSize = size * nmemb;
+  v->insert(v->end(), (unsigned char *)contents, (unsigned char *)contents + totalSize);
+  return totalSize;
+}
+
 void FetchAPI::reset(){
   this->payload.clear();
   this->errorMsg.clear();
@@ -374,6 +380,98 @@ bool FetchAPI::sendFile() {
 
   if (chunk) curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
+
+  pthread_mutex_unlock(&(this->mutex));
+  return (this->errorCode == FetchAPI::FETCH_OK);
+}
+
+bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params){
+  pthread_mutex_lock(&(this->mutex));
+  this->reset();
+  data.clear();
+  CURL *curl = curl_easy_init();
+  if (!curl) {
+    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->errorMsg = "Failed to initialize CURL";
+    if (this->debug) this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "%s\n", this->errorMsg.c_str());
+    pthread_mutex_unlock(&(this->mutex));
+    return false;
+  }
+
+  std::ostringstream fullUrl;
+  fullUrl << this->url;
+  if (!(params.empty())) {
+    fullUrl << "?";
+    for (auto it = params.begin(); it != params.end(); ++it) {
+      if (it != params.begin()) fullUrl << "&";
+      fullUrl << curl_easy_escape(curl, it->first.c_str(), 0)
+              << "="
+              << curl_easy_escape(curl, it->second.c_str(), 0);
+    }
+  }
+
+  struct curl_slist *chunk = nullptr;
+  for (const auto &pair : this->headers) {
+    const auto &key = pair.first;
+    const auto &val = pair.second;
+    chunk = curl_slist_append(chunk, (key + ": " + val).c_str());
+  }
+
+  char postField[2];
+  postField[0] = 0x00;
+  curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "GET");
+  curl_easy_setopt(curl, CURLOPT_URL, fullUrl.str().c_str());
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postField);
+  curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, this->connectTimeout);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, this->totalTimeout);
+  curl_easy_setopt(curl, CURLOPT_USERAGENT, "libcurl-agent-telegram/1.0");
+  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FetchAPI::downloadCallback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
+  if (chunk) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+
+  if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request to %s\n", fullUrl.str().c_str());
+
+  CURLcode res = curl_easy_perform(curl);
+  long httpCode = 0;
+  curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
+
+  if (res != CURLE_OK) {
+    this->errorMsg = curl_easy_strerror(res);
+    switch (res) {
+      case CURLE_COULDNT_CONNECT:
+        this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+        break;
+      case CURLE_OPERATION_TIMEDOUT:
+        this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+        break;
+      case CURLE_URL_MALFORMAT:
+        this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+        break;
+      default:
+        this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+        break;
+    }
+  } else if (httpCode >= 400) {
+    this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
+    this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
+  } else {
+    this->payload = "";
+    this->errorCode = FetchAPI::FETCH_OK;
+  }
+
+  if (chunk) curl_slist_free_all(chunk);
+  curl_easy_cleanup(curl);
+
+  if (this->debug){
+    if (this->errorCode == FetchAPI::FETCH_OK){
+      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request (download) to %s success\n", fullUrl.str().c_str());
+      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "Download size: %lu\n", data.size());
+    }
+    else {
+      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "GET request (download) to %s failed [%s]\n", fullUrl.str().c_str(), this->errorMsg.c_str());
+    }
+  }
 
   pthread_mutex_unlock(&(this->mutex));
   return (this->errorCode == FetchAPI::FETCH_OK);

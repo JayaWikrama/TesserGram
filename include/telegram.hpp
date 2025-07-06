@@ -118,6 +118,8 @@ class Telegram {
         bool apiSendAnimation(long long targetId, const std::string& label, const std::string& filePath);
         bool apiSendVideo(long long targetId, const std::string& label, const std::string& filePath);
         std::string apiGetMediaPath(const std::string& fileId);
+        std::vector <unsigned char> apiDownloadMediaById(const std::string& fileId);
+        std::vector <unsigned char> apiDownloadMediaByPath(const std::string& mediaPath);
 
         bool apiSetWebhook(const std::string& url, const std::string& secretToken, const std::string& allowedUpdates, unsigned short maxConnection);
         bool apiSetWebhook(const std::string& url, const std::string& secretToken, const std::string& allowedUpdates);

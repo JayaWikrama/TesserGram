@@ -18,6 +18,8 @@ class Request {
             EDIT_MESSAGE_TEXT,
             SEND_CHAT_ACTION,
             GET_MEDIA_PATH,
+            DOWNLOAD_MEDIA_BY_PATH,
+            DOWNLOAD_MEDIA_BY_FILE_ID,
             SEND_PHOTO,
             SEND_AUDIO,
             SEND_VIDEO,
@@ -30,6 +32,7 @@ class Request {
         Request(const std::string &url, const std::string &token, REQUEST_t req);
         Request(const std::string &url, const std::string &token, REQUEST_t req, const std::string &data);
         Request(const std::string &url, const std::string &token, REQUEST_t req, const JsonBuilder &data);
+        Request(const std::string &url, const std::string &token, REQUEST_t req, const std::string &ref, std::vector<unsigned char> &data);
         ~Request();
         bool isSuccess();
         const std::string& getResponse() const;
