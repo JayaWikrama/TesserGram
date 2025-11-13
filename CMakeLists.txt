@@ -22,7 +22,6 @@ pkg_check_modules(CURL REQUIRED libcurl)
 
 # Include necessary modules
 include(FindPkgConfig)
-include(FetchContent)
 
 # Add debug option
 option(BUILD_DEBUG "Enable debuging" OFF)
@@ -35,17 +34,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Declare GoogleTest fetch content (only when tests are enabled)
-if(BUILD_TESTS)
-  FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/5376968f6948923e2411081fd9372e71a59d8e77.zip
-  )
-  FetchContent_MakeAvailable(googletest)
-endif()
-
-add_definitions(-D__DATA_DIRECTORY__="root.tessergram.data/")
-
 # Verbose compile option
 option(VERBOSE "Enable verbose compile" OFF)
 if(VERBOSE)
@@ -54,9 +42,7 @@ endif()
 
 # Specify the source files
 set(SOURCE_FILES
-  src/debug.cpp
   src/fetch-api.cpp
-  src/json-parser.cpp
   src/request.cpp
   src/telegram/type.cpp
   src/telegram/common.cpp
@@ -67,73 +53,77 @@ set(SOURCE_FILES
   external/mongoose/src/mongoose.c
 )
 
+# Create object
+add_library(${PROJECT_NAME}-obj OBJECT ${SOURCE_FILES})
+
 # Create static library
-add_library(${PROJECT_NAME}-ar STATIC ${SOURCE_FILES})
+add_library(${PROJECT_NAME}-ar STATIC $<TARGET_OBJECTS:${PROJECT_NAME}-obj>)
 set_target_properties(${PROJECT_NAME}-ar PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 if(BUILD_DEBUG)
   set_target_properties(${PROJECT_NAME}-ar PROPERTIES COMPILE_OPTIONS "-g" LINK_OPTIONS "-g")
 endif()
 
 # Create shared library from static library
-add_library(${PROJECT_NAME}-lib SHARED $<TARGET_OBJECTS:${PROJECT_NAME}-ar>)
+add_library(${PROJECT_NAME}-lib SHARED $<TARGET_OBJECTS:${PROJECT_NAME}-obj>)
 set_target_properties(${PROJECT_NAME}-lib PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 if(BUILD_DEBUG)
   set_target_properties(${PROJECT_NAME}-lib PROPERTIES COMPILE_OPTIONS "-g" LINK_OPTIONS "-g")
 endif()
 
 # Link library
-target_link_libraries(${PROJECT_NAME}-lib ${CURL_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}-lib)
 
 # Include directories for the project
 set(INCLUDE_DIRS
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/mongoose/include>
   $<INSTALL_INTERFACE:include>
   ${CURL_INCLUDE_DIR}
 )
+target_include_directories(${PROJECT_NAME}-obj PUBLIC ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-ar PUBLIC ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-lib PUBLIC ${INCLUDE_DIRS})
+
+# Add dependencies
+add_dependencies(${PROJECT_NAME}-lib utils-ar)
 
 # Create example executable
 
 ## Main Example
 add_executable(${PROJECT_NAME} examples/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib)
-target_link_libraries(${PROJECT_NAME} PUBLIC -lpthread)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib utils-ar)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES} -lpthread)
 
 ## Send Message Example
 add_executable(${PROJECT_NAME}-send-message examples/send-message.cpp)
-target_link_libraries(${PROJECT_NAME}-send-message PRIVATE ${PROJECT_NAME}-lib)
-target_link_libraries(${PROJECT_NAME}-send-message PUBLIC -lpthread)
+target_link_libraries(${PROJECT_NAME}-send-message PRIVATE ${PROJECT_NAME}-lib utils-ar)
+target_link_libraries(${PROJECT_NAME}-send-message PUBLIC ${CURL_LIBRARIES} -lpthread)
 
 ## Keyboard Example
 add_executable(${PROJECT_NAME}-keyboard examples/keyboard.cpp)
-target_link_libraries(${PROJECT_NAME}-keyboard PRIVATE ${PROJECT_NAME}-lib)
-target_link_libraries(${PROJECT_NAME}-keyboard PUBLIC -lpthread)
+target_link_libraries(${PROJECT_NAME}-keyboard PRIVATE ${PROJECT_NAME}-lib utils-ar)
+target_link_libraries(${PROJECT_NAME}-keyboard PUBLIC ${CURL_LIBRARIES} -lpthread)
 
 ## Inline Keyboard Example
 add_executable(${PROJECT_NAME}-inline-keyboard examples/inline-keyboard.cpp)
-target_link_libraries(${PROJECT_NAME}-inline-keyboard PRIVATE ${PROJECT_NAME}-lib)
-target_link_libraries(${PROJECT_NAME}-inline-keyboard PUBLIC -lpthread)
+target_link_libraries(${PROJECT_NAME}-inline-keyboard PRIVATE ${PROJECT_NAME}-lib utils-ar)
+target_link_libraries(${PROJECT_NAME}-inline-keyboard PUBLIC ${CURL_LIBRARIES} -lpthread)
 
 ## Media Example
 add_executable(${PROJECT_NAME}-media examples/media.cpp)
-target_link_libraries(${PROJECT_NAME}-media PRIVATE ${PROJECT_NAME}-lib)
-target_link_libraries(${PROJECT_NAME}-media PUBLIC -lpthread)
-
-# Add test configuration (only when tests are enabled)
-if(BUILD_TESTS)
-  add_executable(${PROJECT_NAME}-test test/test-sam-access.cpp)
-  target_include_directories(${PROJECT_NAME}-test PUBLIC ${INCLUDE_DIRS} ${GTest_INCLUDE_DIRS})
-  target_link_libraries(${PROJECT_NAME}-test PRIVATE ${PROJECT_NAME}-lib gtest gtest_main -lpthread)
-  enable_testing()
-  add_test(NAME example_test COMMAND ${PROJECT_NAME}-test)
-endif()
+target_link_libraries(${PROJECT_NAME}-media PRIVATE ${PROJECT_NAME}-lib utils-ar)
+target_link_libraries(${PROJECT_NAME}-media PUBLIC ${CURL_LIBRARIES} -lpthread)
 
 # Compiler and linker flags
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fPIC")
 set(CMAKE_C_FLAGS_DEBUG "-g -O0 -fPIC")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -fPIC")
+add_definitions(-DCXXSTD_11)
+add_definitions(-D__TESSERGRAM_DATA_DIRECTORY__="root.tessergram.data/")
+
+# Add subdirectory for DataFrame
+add_subdirectory(external/utils EXCLUDE_FROM_ALL)

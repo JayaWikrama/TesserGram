@@ -2,7 +2,7 @@
 #define __REQUEST_API_HPP__
 
 #include <string>
-#include "json-parser.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 class Request {
     private:
@@ -31,7 +31,7 @@ class Request {
         } REQUEST_t;
         Request(const std::string &url, const std::string &token, REQUEST_t req);
         Request(const std::string &url, const std::string &token, REQUEST_t req, const std::string &data);
-        Request(const std::string &url, const std::string &token, REQUEST_t req, const JsonBuilder &data);
+        Request(const std::string &url, const std::string &token, REQUEST_t req, const nlohmann::json &data);
         Request(const std::string &url, const std::string &token, REQUEST_t req, const std::string &ref, std::vector<unsigned char> &data);
         ~Request();
         bool isSuccess();

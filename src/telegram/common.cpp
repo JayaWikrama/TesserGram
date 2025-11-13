@@ -1,45 +1,64 @@
 #include <stdexcept>
 #include <iostream>
 #include <cstring>
-#include "debug.hpp"
-#include "json-parser.hpp"
+#include "utils/include/debug.hpp"
+#include "json-validator.hpp"
+#include "nlohmann/json.hpp"
 #include "telegram.hpp"
 
-NodeMessage::NodeMessage(const std::string& message){
-    JsonObject json(message);
-    JsonObject jmessage;
-    this->callbackQuery = nullptr;
-    this->message = nullptr;
-    if (json["update_id"].isAvailable() == false) throw std::runtime_error("Invalid input: " + message + "!");
-    this->updateId = std::stoll(json["update_id"].getString());
-    if (json["callback_query"].isAvailable()){
+NodeMessage::NodeMessage(const std::string &message)
+{
+    nlohmann::json json = nlohmann::json::parse(message);
+    JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+
+    this->updateId = jvalidator.get<long long>(json, "update_id");
+
+    if (json.contains("callback_query"))
+    {
+        const nlohmann::json &jsonCallbackQuery = jvalidator.getObject(json, "callback_query");
         this->callbackQuery = new CallbackQuery();
-        if (this->callbackQuery->parse(json["callback_query"].getString()) == false){
-            delete this->callbackQuery;
-            this->callbackQuery = nullptr;
+        if (this->callbackQuery)
+        {
+            if (this->callbackQuery->parse(jsonCallbackQuery) == false)
+            {
+                delete this->callbackQuery;
+                this->callbackQuery = nullptr;
+            }
         }
     }
-    else if (json["message"].isAvailable()){
+
+    else if (json.contains("message"))
+    {
+        const nlohmann::json &jsonMessage = jvalidator.getObject(json, "message");
         this->message = new Message();
-        if (this->message->parse(json["message"].getString()) == false){
-            delete this->message;
-            this->message = nullptr;
+        if (this->message)
+        {
+            if (this->message->parse(jsonMessage) == false)
+            {
+                delete this->message;
+                this->message = nullptr;
+            }
         }
     }
-    if (this->message == nullptr && this->callbackQuery == nullptr){
+
+    if (this->message == nullptr && this->callbackQuery == nullptr)
+    {
         throw std::runtime_error("Unknown type: " + message + "!");
     }
     this->next = nullptr;
 }
 
-void NodeMessage::display() const {
+void NodeMessage::display() const
+{
     struct tm dtime;
     char dtimestr[64];
-    if (this->callbackQuery){
+    if (this->callbackQuery)
+    {
         time_t ctime = time(nullptr);
         memcpy(&dtime, localtime(&ctime), sizeof(dtime));
     }
-    else {
+    else
+    {
         memcpy(&dtime, localtime(&(this->message->dtime)), sizeof(dtime));
     }
     sprintf(dtimestr,
@@ -49,8 +68,7 @@ void NodeMessage::display() const {
             dtime.tm_mday,
             dtime.tm_hour,
             dtime.tm_min,
-            dtime.tm_sec
-        );
+            dtime.tm_sec);
     dtimestr[19] = 0x00;
     Debug debug(0);
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
@@ -59,124 +77,117 @@ void NodeMessage::display() const {
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Sender    : %s\n", (this->message ? this->message->from.username.c_str() : this->callbackQuery->message->from.username.c_str()));
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Id   : %lli\n", (this->message ? this->message->chat.id : this->callbackQuery->message->chat.id));
     debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Room Name : %s\n", (this->message ? this->message->chat.title.c_str() : this->callbackQuery->message->chat.title.c_str()));
-    if (this->message){
-        if (this->message->text.length()){
+    if (this->message)
+    {
+        if (this->message->text.length())
+        {
             debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Message   : %s\n", this->message->text.c_str());
         }
-        if (this->message->media.size() == 1){
+        if (this->message->media.size() == 1)
+        {
             debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Media T   : %s\n", this->message->media.at(0).getType().c_str());
             debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Media Id  : %s\n", this->message->media.at(0).fileId.c_str());
         }
-        else if (this->message->media.size() > 1){
+        else if (this->message->media.size() > 1)
+        {
             debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Media T   : %s\n", this->message->media.at(0).getType().c_str());
-            for (int i = 0; i < this->message->media.size(); i++){
+            for (int i = 0; i < this->message->media.size(); i++)
+            {
                 debug.log(Debug::INFO, __PRETTY_FUNCTION__, "    M.id[%d] : %s\n", i, this->message->media.at(i).fileId.c_str());
             }
         }
     }
-    else {
+    else
+    {
         debug.log(Debug::INFO, __PRETTY_FUNCTION__, "  Data      : %s\n", this->callbackQuery->data.c_str());
     }
 }
 
-void Messages::enqueue(const std::string& message){
+void Messages::enqueue(const std::string &message)
+{
     NodeMessage *msg = nullptr;
-    try {
+    try
+    {
         msg = new NodeMessage(message);
-        if (this->first == nullptr){
+        if (this->first == nullptr)
+        {
             this->first = msg;
             this->n++;
         }
-        else {
+        else
+        {
             this->n++;
             this->end->next = msg;
         }
         this->end = msg;
-    } catch (const std::runtime_error& e) {
-        Debug debug(0);
-        debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "Caught runtime_error: %s\n", e.what());
+    }
+    catch (const std::runtime_error &e)
+    {
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "Caught runtime_error: %s\n", e.what());
     }
 }
 
-void Messages::dequeue(){
-    if (this->first == nullptr) return;
+void Messages::dequeue()
+{
+    if (this->first == nullptr)
+        return;
     NodeMessage *tmp = this->first->next;
     delete this->first;
     this->first = tmp;
     this->n--;
-    if (this->first == nullptr) this->end = nullptr;
+    if (this->first == nullptr)
+        this->end = nullptr;
 }
 
-Messages::Messages(){
+Messages::Messages()
+{
     this->n = 0;
     this->first = nullptr;
     this->end = nullptr;
 }
 
-Messages::~Messages(){
-    while (this->first) this->dequeue();
+Messages::~Messages()
+{
+    while (this->first)
+        this->dequeue();
 }
 
-void Messages::clear(){
-    while (this->first) this->dequeue();
+void Messages::clear()
+{
+    while (this->first)
+        this->dequeue();
 }
 
-const NodeMessage *Messages::getMessage() const {
+const NodeMessage *Messages::getMessage() const
+{
     return this->first;
 }
 
-Telegram::Telegram(const std::string &token){
+Telegram::Telegram(const std::string &token)
+{
     this->id = 0;
     this->lastUpdateId = 0;
     this->name = "";
     this->username = "";
     this->token = token;
     this->webhookCallback = nullptr;
-    this->debug = nullptr;
 }
 
-Telegram::~Telegram(){
-    if (this->debug){
-        Debug *dbg = (Debug *) this->debug;
-        delete (dbg);
-    }
+Telegram::~Telegram()
+{
 }
 
-long long Telegram::getId(){
+long long Telegram::getId()
+{
     return this->id;
 }
 
-const std::string& Telegram::getName() const{
+const std::string &Telegram::getName() const
+{
     return this->name;
 }
 
-const std::string& Telegram::getUsername() const{
+const std::string &Telegram::getUsername() const
+{
     return this->username;
-}
-
-void Telegram::enableDebug(){
-    this->debug = (Debug_t) new Debug(0);
-}
-
-void Telegram::enableDebug(const std::string &confidential){
-    Debug *dbg = new Debug(100);
-    dbg->setConfidential(confidential);
-    this->debug = (Debug_t) dbg;
-}
-
-void Telegram::enableDebug(const std::vector <std::string> &confidential){
-    Debug *dbg = new Debug(100);
-    for (int i = 0; i < confidential.size(); i++)  dbg->setConfidential(confidential.at(i));
-    this->debug = (Debug_t) dbg;
-}
-
-void Telegram::disableDebug(){
-    Debug *dbg = (Debug *) this->debug;
-    if (dbg == nullptr) return;
-    delete (dbg);
-    this->debug = nullptr;
-}
-
-bool Telegram::isDebugEnable(){
-  return (this->debug != nullptr);
 }

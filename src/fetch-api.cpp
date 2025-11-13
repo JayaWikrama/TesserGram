@@ -3,11 +3,65 @@
 #include <stdexcept>
 #include <curl/curl.h>
 #include "fetch-api.hpp"
-#include "json-parser.hpp"
+#include "json-validator.hpp"
+#include "nlohmann/json.hpp"
+#include "utils/include/error.hpp"
 
-FetchAPI::FetchAPI(const std::string &url, unsigned short connectTimeout, unsigned short totalTimeout){
-  if (pthread_mutex_init(&(this->mutex), nullptr)) throw std::runtime_error("Failed to initialize mutex!");
-  pthread_mutex_lock(&(this->mutex));
+FetchAPI::Mime::Mime() : file(false), name(), data(), type()
+{
+}
+
+FetchAPI::Mime::~Mime() {}
+
+bool FetchAPI::Mime::parse(const nlohmann::json &json)
+{
+  try
+  {
+    JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+
+    this->name = jvalidator.get<std::string>(json, "name");
+    this->data = jvalidator.get<std::string>(json, "data");
+    if (json.contains("content_type"))
+      this->type = jvalidator.get<std::string>(json, "content_type");
+    else
+      this->type.clear();
+    this->file = jvalidator.get<bool>(json, "is_file");
+    return true;
+  }
+  catch (const std::exception &e)
+  {
+    Debug::log(Debug::WARNING, __FILE__, __LINE__, __func__, "parse error: %s!\n", e.what());
+  }
+  return false;
+}
+
+bool FetchAPI::Mime::isFile() const
+{
+  return this->file;
+}
+
+bool FetchAPI::Mime::isContainsType() const
+{
+  return !(this->type.empty());
+}
+
+const std::string &FetchAPI::Mime::getName() const
+{
+  return this->name;
+}
+
+const std::string &FetchAPI::Mime::getData() const
+{
+  return this->data;
+}
+
+const std::string &FetchAPI::Mime::getType() const
+{
+  return this->type;
+}
+
+FetchAPI::FetchAPI(const std::string &url, unsigned short connectTimeout, unsigned short totalTimeout) : debug(100), mutex()
+{
   this->url = url;
   this->connectTimeout = connectTimeout;
   this->totalTimeout = totalTimeout;
@@ -16,110 +70,88 @@ FetchAPI::FetchAPI(const std::string &url, unsigned short connectTimeout, unsign
   this->errorCode = FetchAPI::FETCH_OK;
   this->headers.clear();
   this->body = "";
-  this->debug = nullptr;
-  pthread_mutex_unlock(&(this->mutex));
 }
 
-FetchAPI::~FetchAPI() {
-  pthread_mutex_lock(&(this->mutex));
-  pthread_mutex_unlock(&(this->mutex));
-  pthread_mutex_destroy(&(this->mutex));
+FetchAPI::~FetchAPI()
+{
 }
 
-void FetchAPI::enableDebug(){
-  pthread_mutex_lock(&(this->mutex));
-  this->debug = new Debug(100);
-  pthread_mutex_unlock(&(this->mutex));
+void FetchAPI::setHiddenConfidential(const std::string &confidential)
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
+  this->debug.setConfidential(confidential);
 }
 
-void FetchAPI::enableDebug(const std::string &confidential){
-  pthread_mutex_lock(&(this->mutex));
-  this->debug = new Debug(100);
-  this->debug->setConfidential(confidential);
-  pthread_mutex_unlock(&(this->mutex));
+void FetchAPI::setHiddenConfidential(const std::vector<std::string> &confidential)
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
+  for (const std::string &conf : confidential)
+    this->debug.setConfidential(conf);
 }
 
-void FetchAPI::enableDebug(const std::vector <std::string> &confidential){
-  pthread_mutex_lock(&(this->mutex));
-  this->debug = new Debug(100);
-  for (int i = 0; i < confidential.size(); i++)  this->debug->setConfidential(confidential.at(i));
-  pthread_mutex_unlock(&(this->mutex));
-}
-
-void FetchAPI::disableDebug(){
-  pthread_mutex_lock(&(this->mutex));
-  delete (this->debug);
-  this->debug = nullptr;
-  pthread_mutex_unlock(&(this->mutex));
-}
-
-bool FetchAPI::isDebugEnable(){
-  pthread_mutex_lock(&(this->mutex));
-  bool result = (this->debug != nullptr);
-  pthread_mutex_unlock(&(this->mutex));
-  return result;
-}
-
-Debug& FetchAPI::DEBUG(){
-  pthread_mutex_lock(&(this->mutex));
-  if (this->debug == nullptr) throw std::runtime_error("Debug is disabled!");
-  pthread_mutex_unlock(&(this->mutex));
-  return *(this->debug);
-}
-
-void FetchAPI::insertHeader(const std::string &key, const std::string &value){
-  pthread_mutex_lock(&(this->mutex));
+void FetchAPI::insertHeader(const std::string &key, const std::string &value)
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
   auto it = this->headers.find(key);
-  if (it != this->headers.end()) {
+  if (it != this->headers.end())
+  {
     it->second = value;
-  } else {
+  }
+  else
+  {
     this->headers.insert({key, value});
   }
-  pthread_mutex_unlock(&(this->mutex));
 }
 
-void FetchAPI::setBody(const std::string &data){
-  pthread_mutex_lock(&(this->mutex));
+void FetchAPI::setBody(const std::string &data)
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
   this->body = data;
-  pthread_mutex_unlock(&(this->mutex));
 }
 
-size_t FetchAPI::writeCallback(void *contents, size_t size, size_t nmemb, std::string *s){
+size_t FetchAPI::writeCallback(void *contents, size_t size, size_t nmemb, std::string *s)
+{
   size_t totalSize = size * nmemb;
   s->append((char *)contents, totalSize);
   return totalSize;
 }
 
-size_t FetchAPI::downloadCallback(void *contents, size_t size, size_t nmemb, std::vector<unsigned char> *v){
+size_t FetchAPI::downloadCallback(void *contents, size_t size, size_t nmemb, std::vector<unsigned char> *v)
+{
   size_t totalSize = size * nmemb;
   v->insert(v->end(), (unsigned char *)contents, (unsigned char *)contents + totalSize);
   return totalSize;
 }
 
-void FetchAPI::reset(){
+void FetchAPI::reset()
+{
   this->payload.clear();
   this->errorMsg.clear();
   this->errorCode = FetchAPI::FETCH_OK;
 }
 
-bool FetchAPI::get(const std::map<std::string, std::string> &queryParams){
-  pthread_mutex_lock(&(this->mutex));
+bool FetchAPI::get(const std::map<std::string, std::string> &queryParams)
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
   this->reset();
   CURL *curl = curl_easy_init();
-  if (!curl) {
+  if (!curl)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
-    if (this->debug) this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "%s\n", this->errorMsg.c_str());
-    pthread_mutex_unlock(&(this->mutex));
+    this->debug.log(Debug::ERROR, __func__, "%s\n", this->errorMsg.c_str());
     return false;
   }
 
   std::ostringstream fullUrl;
   fullUrl << this->url;
-  if (!(queryParams.empty())) {
+  if (!(queryParams.empty()))
+  {
     fullUrl << "?";
-    for (auto it = queryParams.begin(); it != queryParams.end(); ++it) {
-      if (it != queryParams.begin()) fullUrl << "&";
+    for (auto it = queryParams.begin(); it != queryParams.end(); ++it)
+    {
+      if (it != queryParams.begin())
+        fullUrl << "&";
       fullUrl << curl_easy_escape(curl, it->first.c_str(), 0)
               << "="
               << curl_easy_escape(curl, it->second.c_str(), 0);
@@ -127,7 +159,8 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams){
   }
 
   struct curl_slist *chunk = nullptr;
-  for (const auto &pair : this->headers) {
+  for (const auto &pair : this->headers)
+  {
     const auto &key = pair.first;
     const auto &val = pair.second;
     chunk = curl_slist_append(chunk, (key + ": " + val).c_str());
@@ -145,69 +178,80 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams){
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FetchAPI::writeCallback);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  if (chunk) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+  if (chunk)
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
-  if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request to %s\n", fullUrl.str().c_str());
+  this->debug.log(Debug::INFO, __func__, "GET request to %s\n", fullUrl.str().c_str());
 
   CURLcode res = curl_easy_perform(curl);
   long httpCode = 0;
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
-  if (res != CURLE_OK) {
+  if (res != CURLE_OK)
+  {
     this->errorMsg = curl_easy_strerror(res);
-    switch (res) {
-      case CURLE_COULDNT_CONNECT:
-        this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
-        break;
-      case CURLE_OPERATION_TIMEDOUT:
-        this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
-        break;
-      case CURLE_URL_MALFORMAT:
-        this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
-        break;
-      default:
-        this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
-        break;
+    switch (res)
+    {
+    case CURLE_COULDNT_CONNECT:
+      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      break;
+    case CURLE_OPERATION_TIMEDOUT:
+      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      break;
+    case CURLE_URL_MALFORMAT:
+      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      break;
+    default:
+      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      break;
     }
-  } else if (httpCode >= 400) {
+  }
+  else if (httpCode >= 400)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
-  } else {
+  }
+  else
+  {
     this->payload = response;
     this->errorCode = FetchAPI::FETCH_OK;
   }
 
-  if (chunk) curl_slist_free_all(chunk);
+  if (chunk)
+    curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
 
-  if (this->debug){
-    if (this->errorCode == FetchAPI::FETCH_OK){
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request to %s success\n", fullUrl.str().c_str());
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
+  {
+    if (this->errorCode == FetchAPI::FETCH_OK)
+    {
+      this->debug.log(Debug::INFO, __func__, "GET request to %s success\n", fullUrl.str().c_str());
+      this->debug.log(Debug::INFO, __func__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
-    else {
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "GET request to %s failed [%s]\n", fullUrl.str().c_str(), this->errorMsg.c_str());
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
+    else
+    {
+      this->debug.log(Debug::ERROR, __func__, "GET request to %s failed [%s]\n", fullUrl.str().c_str(), this->errorMsg.c_str());
+      this->debug.log(Debug::ERROR, __func__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
   }
 
-  pthread_mutex_unlock(&(this->mutex));
   return (this->errorCode == FetchAPI::FETCH_OK);
 }
 
-bool FetchAPI::post() {
-  pthread_mutex_lock(&(this->mutex));
+bool FetchAPI::post()
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
   reset();
   CURL *curl = curl_easy_init();
-  if (!curl) {
+  if (!curl)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
-    pthread_mutex_unlock(&(this->mutex));
     return false;
   }
 
   struct curl_slist *chunk = nullptr;
-  for (const auto &pair : this->headers) {
+  for (const auto &pair : this->headers)
+  {
     const auto &key = pair.first;
     const auto &val = pair.second;
     chunk = curl_slist_append(chunk, (key + ": " + val).c_str());
@@ -223,88 +267,109 @@ bool FetchAPI::post() {
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FetchAPI::writeCallback);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  if (chunk) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+  if (chunk)
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
-  if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s with data %s\n", this->url.c_str(), this->body.c_str());
+  this->debug.log(Debug::INFO, __func__, "POST request to %s with data %s\n", this->url.c_str(), this->body.c_str());
 
   CURLcode res = curl_easy_perform(curl);
   long httpCode = 0;
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
-  if (res != CURLE_OK) {
+  if (res != CURLE_OK)
+  {
     this->errorMsg = curl_easy_strerror(res);
-    switch (res) {
-      case CURLE_COULDNT_CONNECT:
-        this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
-        break;
-      case CURLE_OPERATION_TIMEDOUT:
-        this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
-        break;
-      case CURLE_URL_MALFORMAT:
-        this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
-        break;
-      default:
-        this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
-        break;
+    switch (res)
+    {
+    case CURLE_COULDNT_CONNECT:
+      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      break;
+    case CURLE_OPERATION_TIMEDOUT:
+      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      break;
+    case CURLE_URL_MALFORMAT:
+      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      break;
+    default:
+      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      break;
     }
-  } else if (httpCode >= 400) {
+  }
+  else if (httpCode >= 400)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
-  } else {
+  }
+  else
+  {
     this->payload = response;
     this->errorCode = FetchAPI::FETCH_OK;
   }
 
-  if (this->debug){
-    if (this->errorCode == FetchAPI::FETCH_OK){
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s success\n", this->url.c_str());
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
+  {
+    if (this->errorCode == FetchAPI::FETCH_OK)
+    {
+      this->debug.log(Debug::INFO, __func__, "POST request to %s success\n", this->url.c_str());
+      this->debug.log(Debug::INFO, __func__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
-    else {
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "POST request to %s failed [%s]\n", this->url.c_str(), this->errorMsg.c_str());
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
+    else
+    {
+      this->debug.log(Debug::ERROR, __func__, "POST request to %s failed [%s]\n", this->url.c_str(), this->errorMsg.c_str());
+      this->debug.log(Debug::ERROR, __func__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
   }
 
-  if (chunk) curl_slist_free_all(chunk);
+  if (chunk)
+    curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
 
-  pthread_mutex_unlock(&(this->mutex));
   return (this->errorCode == FetchAPI::FETCH_OK);
 }
 
-bool FetchAPI::sendFile() {
-  pthread_mutex_lock(&(this->mutex));
+bool FetchAPI::sendFile()
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
   reset();
-  if (body.length() == 0){
+  if (body.length() == 0)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
     this->errorMsg = "body empty";
-    pthread_mutex_unlock(&(this->mutex));
     return false;
   }
-  JsonObject json(this->body);
-  int arrayLength = json["mime"].getArraySize();
-  if (arrayLength == 0){
+
+  nlohmann::json json;
+  nlohmann::json jmime;
+  try
+  {
+    json = nlohmann::json::parse(this->body);
+
+    JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+    jmime = jvalidator.getArray(json, "mime");
+  }
+  catch (const std::exception &e)
+  {
+    this->debug.log(Debug::ERROR, __func__, "mime parse failed: %s!\n", e.what());
     this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
     this->errorMsg = "invalid json format";
-    pthread_mutex_unlock(&(this->mutex));
     return false;
   }
   curl_mime *mime = nullptr;
   curl_mimepart *part = nullptr;
   CURL *curl = curl_easy_init();
-  if (!curl) {
+  if (!curl)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
-    pthread_mutex_unlock(&(this->mutex));
     return false;
   }
 
   struct curl_slist *chunk = nullptr;
-  for (const auto &pair : this->headers) {
+  for (const auto &pair : this->headers)
+  {
     const auto &key = pair.first;
     const auto &val = pair.second;
-    if (key != std::string("Content-Type") && key != std::string("Content-type") && key != std::string("content-type")){
+    if (key != std::string("Content-Type") && key != std::string("Content-type") && key != std::string("content-type"))
+    {
       chunk = curl_slist_append(chunk, (key + ": " + val).c_str());
     }
   }
@@ -317,93 +382,109 @@ bool FetchAPI::sendFile() {
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FetchAPI::writeCallback);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-  if (chunk) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+  if (chunk)
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
   mime = curl_mime_init(curl);
 
-  for (int i = 0; i < arrayLength; i++) {
-    part = curl_mime_addpart(mime);
-    curl_mime_name(part, json["mime[" + std::to_string(i) + "]->name"].getString().c_str());
-    if (json["mime[" + std::to_string(i) + "]->is_file"].getString() == "true"){
-      curl_mime_filedata(part, json["mime[" + std::to_string(i) + "]->data"].getString().c_str());
-    }
-    else {
-      curl_mime_data(part, json["mime[" + std::to_string(i) + "]->data"].getString().c_str(), CURL_ZERO_TERMINATED);
-    }
-    if (json["mime[" + std::to_string(i) + "]->content_type"].isAvailable()){
-      curl_mime_type(part, json["mime[" + std::to_string(i) + "]->content_type"].getString().c_str());
+  FetchAPI::Mime mimeObject;
+
+  for (const auto &j : jmime)
+  {
+    if (mimeObject.parse(j))
+    {
+      part = curl_mime_addpart(mime);
+      curl_mime_name(part, mimeObject.getName().c_str());
+      if (mimeObject.isFile())
+        curl_mime_filedata(part, mimeObject.getData().c_str());
+      else
+        curl_mime_data(part, mimeObject.getData().c_str(), CURL_ZERO_TERMINATED);
+      if (mimeObject.isContainsType())
+        curl_mime_type(part, mimeObject.getType().c_str());
     }
   }
 
   curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
 
-  if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s with data %s\n", this->url.c_str(), this->body.c_str());
+  this->debug.log(Debug::INFO, __func__, "POST request to %s with data %s\n", this->url.c_str(), this->body.c_str());
 
   CURLcode res = curl_easy_perform(curl);
   curl_mime_free(mime);
   long httpCode = 0;
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
-  if (res != CURLE_OK) {
+  if (res != CURLE_OK)
+  {
     this->errorMsg = curl_easy_strerror(res);
-    switch (res) {
-      case CURLE_COULDNT_CONNECT:
-        this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
-        break;
-      case CURLE_OPERATION_TIMEDOUT:
-        this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
-        break;
-      case CURLE_URL_MALFORMAT:
-        this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
-        break;
-      default:
-        this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
-        break;
+    switch (res)
+    {
+    case CURLE_COULDNT_CONNECT:
+      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      break;
+    case CURLE_OPERATION_TIMEDOUT:
+      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      break;
+    case CURLE_URL_MALFORMAT:
+      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      break;
+    default:
+      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      break;
     }
-  } else if (httpCode >= 400) {
+  }
+  else if (httpCode >= 400)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
-  } else {
+  }
+  else
+  {
     this->payload = response;
     this->errorCode = FetchAPI::FETCH_OK;
   }
 
-  if (this->debug){
-    if (this->errorCode == FetchAPI::FETCH_OK){
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "POST request to %s success\n", this->url.c_str());
+  {
+    if (this->errorCode == FetchAPI::FETCH_OK)
+    {
+      this->debug.log(Debug::INFO, __func__, "POST request to %s success\n", this->url.c_str());
     }
-    else {
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "POST request to %s failed [%s]\n", this->url.c_str(), this->errorMsg.c_str());
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
+    else
+    {
+      this->debug.log(Debug::ERROR, __func__, "POST request to %s failed [%s]\n", this->url.c_str(), this->errorMsg.c_str());
+      this->debug.log(Debug::ERROR, __func__, "Error body response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
     }
   }
 
-  if (chunk) curl_slist_free_all(chunk);
+  if (chunk)
+    curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
 
-  pthread_mutex_unlock(&(this->mutex));
   return (this->errorCode == FetchAPI::FETCH_OK);
 }
 
-bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params){
-  pthread_mutex_lock(&(this->mutex));
+bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params)
+{
+  std::lock_guard<std::mutex> guard(this->mutex);
   this->reset();
   data.clear();
   CURL *curl = curl_easy_init();
-  if (!curl) {
+  if (!curl)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
-    if (this->debug) this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "%s\n", this->errorMsg.c_str());
-    pthread_mutex_unlock(&(this->mutex));
+    this->debug.log(Debug::ERROR, __func__, "%s\n", this->errorMsg.c_str());
     return false;
   }
 
   std::ostringstream fullUrl;
   fullUrl << this->url;
-  if (!(params.empty())) {
+  if (!(params.empty()))
+  {
     fullUrl << "?";
-    for (auto it = params.begin(); it != params.end(); ++it) {
-      if (it != params.begin()) fullUrl << "&";
+    for (auto it = params.begin(); it != params.end(); ++it)
+    {
+      if (it != params.begin())
+        fullUrl << "&";
       fullUrl << curl_easy_escape(curl, it->first.c_str(), 0)
               << "="
               << curl_easy_escape(curl, it->second.c_str(), 0);
@@ -411,7 +492,8 @@ bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::st
   }
 
   struct curl_slist *chunk = nullptr;
-  for (const auto &pair : this->headers) {
+  for (const auto &pair : this->headers)
+  {
     const auto &key = pair.first;
     const auto &val = pair.second;
     chunk = curl_slist_append(chunk, (key + ": " + val).c_str());
@@ -428,75 +510,84 @@ bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::st
   curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FetchAPI::downloadCallback);
   curl_easy_setopt(curl, CURLOPT_WRITEDATA, &data);
-  if (chunk) curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+  if (chunk)
+    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
 
-  if (this->debug) this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request to %s\n", fullUrl.str().c_str());
+  this->debug.log(Debug::INFO, __func__, "GET request to %s\n", fullUrl.str().c_str());
 
   CURLcode res = curl_easy_perform(curl);
   long httpCode = 0;
   curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpCode);
 
-  if (res != CURLE_OK) {
+  if (res != CURLE_OK)
+  {
     this->errorMsg = curl_easy_strerror(res);
-    switch (res) {
-      case CURLE_COULDNT_CONNECT:
-        this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
-        break;
-      case CURLE_OPERATION_TIMEDOUT:
-        this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
-        break;
-      case CURLE_URL_MALFORMAT:
-        this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
-        break;
-      default:
-        this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
-        break;
+    switch (res)
+    {
+    case CURLE_COULDNT_CONNECT:
+      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      break;
+    case CURLE_OPERATION_TIMEDOUT:
+      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      break;
+    case CURLE_URL_MALFORMAT:
+      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      break;
+    default:
+      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      break;
     }
-  } else if (httpCode >= 400) {
+  }
+  else if (httpCode >= 400)
+  {
     this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
-  } else {
+  }
+  else
+  {
     this->payload = "";
     this->errorCode = FetchAPI::FETCH_OK;
   }
 
-  if (chunk) curl_slist_free_all(chunk);
+  if (chunk)
+    curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
 
-  if (this->debug){
-    if (this->errorCode == FetchAPI::FETCH_OK){
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "GET request (download) to %s success\n", fullUrl.str().c_str());
-      this->debug->log(Debug::INFO, __PRETTY_FUNCTION__, "Download size: %lu\n", data.size());
+  {
+    if (this->errorCode == FetchAPI::FETCH_OK)
+    {
+      this->debug.log(Debug::INFO, __func__, "GET request (download) to %s success\n", fullUrl.str().c_str());
+      this->debug.log(Debug::INFO, __func__, "Download size: %lu\n", data.size());
     }
-    else {
-      this->debug->log(Debug::ERROR, __PRETTY_FUNCTION__, "GET request (download) to %s failed [%s]\n", fullUrl.str().c_str(), this->errorMsg.c_str());
+    else
+    {
+      this->debug.log(Debug::ERROR, __func__, "GET request (download) to %s failed [%s]\n", fullUrl.str().c_str(), this->errorMsg.c_str());
     }
   }
 
-  pthread_mutex_unlock(&(this->mutex));
   return (this->errorCode == FetchAPI::FETCH_OK);
 }
 
-std::string FetchAPI::getPayload() {
+std::string FetchAPI::getPayload()
+{
   std::string result;
-  pthread_mutex_lock(&(this->mutex));
+  std::lock_guard<std::mutex> guard(this->mutex);
   result = this->payload;
-  pthread_mutex_unlock(&(this->mutex));
   return result;
 }
 
-std::string FetchAPI::getError() {
+std::string FetchAPI::getError()
+{
   std::string result;
-  pthread_mutex_lock(&(this->mutex));
+  std::lock_guard<std::mutex> guard(this->mutex);
   result = this->errorMsg;
-  pthread_mutex_unlock(&(this->mutex));
   return result;
 }
 
-FetchAPI::FetchErrorCode_t FetchAPI::getErrorCode() {
+FetchAPI::FetchErrorCode_t FetchAPI::getErrorCode()
+{
   FetchAPI::FetchErrorCode_t result;
-  pthread_mutex_lock(&(this->mutex));
+  std::lock_guard<std::mutex> guard(this->mutex);
   result = this->errorCode;
-  pthread_mutex_unlock(&(this->mutex));
   return result;
 }

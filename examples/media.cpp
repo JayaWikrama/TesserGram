@@ -4,15 +4,16 @@
 #include <string>
 #include <unistd.h>
 #include "telegram.hpp"
-#include "debug.hpp"
-#include "json-parser.hpp"
+#include "json-validator.hpp"
+#include "nlohmann/json.hpp"
+#include "utils/include/debug.hpp"
 
-Debug debug(10);
-
-std::string readenv() {
+std::string readenv()
+{
     std::ifstream file(".env");
-    if (!file.is_open()) {
-        debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "ENV not found!\n");
+    if (!file.is_open())
+    {
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "ENV not found!\n");
         return "";
     }
 
@@ -23,21 +24,25 @@ std::string readenv() {
     return ss.str();
 }
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
     std::string dotenvPayload = readenv();
-    JsonObject env(dotenvPayload);
-    Telegram telegram(env["bot->token"].getString());
-    telegram.enableDebug();
-    if (telegram.apiGetMe()){
-        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Id: %lli\n", telegram.getId());
-        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Name: %s\n", telegram.getName().c_str());
-        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Username: %s\n", telegram.getUsername().c_str());
-        
-        telegram.apiSendDocument(std::stoll(env["bot->target_id"].getString()), "Read this document!", "../README.md");
-        telegram.apiSendPhoto(std::stoll(env["bot->target_id"].getString()), "This the picture!", "../docs/images/typing_chat_action.jpeg");
+    nlohmann::json env = nlohmann::json::parse(dotenvPayload);
+
+    Telegram telegram(env["bot"]["token"].get<std::string>());
+
+    if (telegram.apiGetMe())
+    {
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Telegram Bot Id: %lli\n", telegram.getId());
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Telegram Bot Name: %s\n", telegram.getName().c_str());
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Telegram Bot Username: %s\n", telegram.getUsername().c_str());
+
+        telegram.apiSendDocument(env["bot"]["target_id"].get<long long>(), "Read this document!", "../README.md");
+        telegram.apiSendPhoto(env["bot"]["target_id"].get<long long>(), "This the picture!", "../docs/images/typing_chat_action.jpeg");
     }
-    else {
-        debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "Failed to access telegram!\n");
+    else
+    {
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "Failed to access telegram!\n");
     }
     return 0;
 }
