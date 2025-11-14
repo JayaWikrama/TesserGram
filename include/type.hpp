@@ -111,4 +111,12 @@ public:
     void reset();
 };
 
+struct MediaTypeEntry
+{
+    Media::TYPE_t type;
+    const char *key;
+};
+
+extern const struct MediaTypeEntry mediaTypes[10];
+
 #endif
