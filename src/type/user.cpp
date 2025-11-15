@@ -13,6 +13,11 @@ User::~User()
 {
 }
 
+bool User::empty() const
+{
+    return (this->id == 0);
+}
+
 bool User::parse(const nlohmann::json &json)
 {
     try

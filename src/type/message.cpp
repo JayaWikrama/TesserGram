@@ -13,8 +13,11 @@ Message::Message()
 
 Message::~Message()
 {
-    if (this->replyToMessage)
-        delete this->replyToMessage;
+}
+
+bool Message::empty() const
+{
+    return (this->id == 0);
 }
 
 bool Message::parse(const nlohmann::json &json)
@@ -49,14 +52,13 @@ bool Message::parse(const nlohmann::json &json)
         {
             try
             {
-                this->replyToMessage = new Message();
                 const nlohmann::json &jsonReplyToMessage = jvalidator.getObject(json, "reply_to_message");
-                if (this->replyToMessage)
+                this->replyToMessage.reset(new Message());
+                if (this->replyToMessage.get() != nullptr)
                 {
                     if (this->replyToMessage->parse(jsonReplyToMessage) == false)
                     {
-                        delete this->replyToMessage;
-                        this->replyToMessage = nullptr;
+                        this->replyToMessage.reset();
                     }
                 }
             }
@@ -112,7 +114,6 @@ void Message::reset()
     this->from.reset();
     this->chat.reset();
     this->media.clear();
-    if (this->replyToMessage)
-        delete this->replyToMessage;
-    this->replyToMessage = nullptr;
+    if (this->replyToMessage.get() != nullptr)
+        this->replyToMessage.reset();
 }

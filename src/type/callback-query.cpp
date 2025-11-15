@@ -11,8 +11,11 @@ CallbackQuery::CallbackQuery()
 
 CallbackQuery::~CallbackQuery()
 {
-    if (this->message)
-        delete this->message;
+}
+
+bool CallbackQuery::empty() const
+{
+    return (this->id == 0);
 }
 
 bool CallbackQuery::parse(const nlohmann::json &json)
@@ -32,13 +35,12 @@ bool CallbackQuery::parse(const nlohmann::json &json)
         if (json.contains("message"))
         {
             const nlohmann::json &jsonMessage = jvalidator.getObject(json, "message");
-            this->message = new Message();
-            if (this->message)
+            this->message.reset(new Message());
+            if (this->message.get() != nullptr)
             {
                 if (this->message->parse(jsonMessage) == false)
                 {
-                    delete this->message;
-                    this->message = nullptr;
+                    this->message.reset();
                 }
             }
         }
@@ -59,7 +61,6 @@ void CallbackQuery::reset()
     this->chatInstance.clear();
     this->data.clear();
     this->from.reset();
-    if (this->message)
-        delete this->message;
-    this->message = nullptr;
+    if (this->message.get() != nullptr)
+        this->message.reset();
 }

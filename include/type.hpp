@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <ctime>
+#include <memory>
 #include "nlohmann/json_fwd.hpp"
 
 class User
@@ -18,6 +19,7 @@ public:
 
     User();
     ~User();
+    bool empty() const;
     bool parse(const nlohmann::json &json);
     void reset();
 };
@@ -43,6 +45,7 @@ public:
 
     Chat();
     ~Chat();
+    bool empty() const;
     bool parse(const nlohmann::json &json);
     void reset();
 };
@@ -72,9 +75,10 @@ public:
 
     Media();
     ~Media();
+    bool empty() const;
     bool parse(TYPE_t type, const nlohmann::json &json);
     void reset();
-    const std::string getType();
+    const std::string getType() const;
 };
 
 class Message
@@ -88,10 +92,11 @@ public:
     User from;
     Chat chat;
     std::vector<Media> media;
-    Message *replyToMessage;
+    std::unique_ptr<Message> replyToMessage;
 
     Message();
     ~Message();
+    bool empty() const;
     bool parse(const nlohmann::json &json);
     void reset();
 };
@@ -103,10 +108,11 @@ public:
     std::string chatInstance;
     std::string data;
     User from;
-    Message *message;
+    std::unique_ptr<Message> message;
 
     CallbackQuery();
     ~CallbackQuery();
+    bool empty() const;
     bool parse(const nlohmann::json &json);
     void reset();
 };

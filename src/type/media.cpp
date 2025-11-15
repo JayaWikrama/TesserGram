@@ -25,6 +25,11 @@ Media::~Media()
 {
 }
 
+bool Media::empty() const
+{
+    return this->fileId.empty();
+}
+
 bool Media::parse(TYPE_t type, const nlohmann::json &json)
 {
     try
@@ -63,7 +68,7 @@ void Media::reset()
     this->fileName.clear();
 }
 
-const std::string Media::getType()
+const std::string Media::getType() const
 {
     for (const auto &entry : mediaTypes)
     {

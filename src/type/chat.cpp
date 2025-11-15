@@ -14,6 +14,11 @@ Chat::~Chat()
 {
 }
 
+bool Chat::empty() const
+{
+    return (this->id == 0);
+}
+
 bool Chat::parse(const nlohmann::json &json)
 {
     try
