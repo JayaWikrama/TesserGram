@@ -74,37 +74,38 @@ void processMedia(Telegram &telegram, const std::vector<Media> &media)
 
 void updatesCallback(Telegram &telegram, void *ptr)
 {
-    const NodeMessage *msg = telegram.message.getMessage();
-    while (msg)
+    for (const NodeMessage &message : telegram.messages)
     {
-        msg->display();
+        message.display();
         if (ptr == nullptr)
         {
-            if (msg->message)
-            {
-                telegram.apiSendChatAction(msg->message->chat.id, Telegram::TYPING);
-                if (msg->message->text.length() > 0)
-                {
-                    std::string reply = getReplay(msg->message->text);
-                    telegram.apiSendMessage(msg->message->chat.id, reply);
-                }
-                processMedia(telegram, msg->message->media);
-            }
-            else
-            {
-                telegram.apiSendChatAction(msg->callbackQuery->message->chat.id, Telegram::TYPING);
-                std::string reply = getReplay(msg->callbackQuery->data);
-                telegram.apiSendMessage(msg->callbackQuery->message->chat.id, reply);
-            }
+            message
+                .processMessage(
+                    [&](const Message &m)
+                    {
+                        telegram.apiSendChatAction(m.chat.id, Telegram::TYPING);
+                        if (m.text.length() > 0)
+                        {
+                            std::string reply = getReplay(m.text);
+                            telegram.apiSendMessage(m.chat.id, reply);
+                        }
+                        processMedia(telegram, m.media);
+                    })
+                .processCallbackQuery(
+                    [&](const CallbackQuery &c)
+                    {
+                        telegram.apiSendChatAction(c.message->chat.id, Telegram::TYPING);
+                        std::string reply = getReplay(c.data);
+                        telegram.apiSendMessage(c.message->chat.id, reply);
+                    });
         }
-        telegram.message.dequeue();
-        msg = telegram.message.getMessage();
     }
+    telegram.messages.clear();
 }
 
 void webhookRoutine(Telegram &telegram, const std::string &url)
 {
-    telegram.setWebhookCallback(updatesCallback, nullptr);
+    telegram.setWebhookCallback(Function(updatesCallback, nullptr));
     telegram.apiSetWebhook(url);
     telegram.servWebhook();
 }

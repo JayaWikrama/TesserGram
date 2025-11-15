@@ -22,8 +22,17 @@ static void webhookHandler(struct mg_connection *c, int ev, void *ev_data)
 
     struct mg_http_message *hm = (struct mg_http_message *)ev_data;
     std::string body(hm->body.buf, hm->body.len);
-    bool isThreadRun = (hook->message.getMessage() != nullptr);
-    hook->message.enqueue(body);
+    bool isThreadRun = (hook->messages.size() > 0);
+    try
+    {
+        hook->messages.emplace_back();
+        hook->messages.back().parse(body);
+    }
+    catch (const std::exception &e)
+    {
+        hook->messages.pop_back();
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "failed to parse message: %s!\n", e.what());
+    }
 
     mg_http_reply(c, 200,
                   "Content-Type: application/json\r\n",
@@ -31,11 +40,10 @@ static void webhookHandler(struct mg_connection *c, int ev, void *ev_data)
                   MG_ESC("status"), MG_ESC("success"),
                   MG_ESC("data"), MG_ESC("message"), MG_ESC("message received"));
 
-    if (hook->webhookCallback && isThreadRun == false)
+    if (hook->webhookCallback.ready() && isThreadRun == false)
     {
-        void *(*callback)(Telegram &, void *) = (void *(*)(Telegram &, void *))hook->webhookCallback;
-        std::thread([callback]()
-                    { callback(*hook, hook->webhookCallbackData); })
+        std::thread([]()
+                    { hook->webhookCallback.exec(*hook); })
             .detach();
     }
 }
@@ -86,10 +94,9 @@ bool Telegram::apiUnsetWebhook()
     return false;
 }
 
-void Telegram::setWebhookCallback(void (*__callback)(Telegram &, void *), void *data)
+void Telegram::setWebhookCallback(const Function &func)
 {
-    this->webhookCallback = (void *)__callback;
-    this->webhookCallbackData = data;
+    this->webhookCallback = func;
 }
 
 void Telegram::servWebhook()

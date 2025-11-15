@@ -44,11 +44,13 @@ endif()
 set(SOURCE_FILES
   src/fetch-api.cpp
   src/request.cpp
+  src/function.cpp
   src/type/user.cpp
   src/type/chat.cpp
   src/type/media.cpp
   src/type/message.cpp
   src/type/callback-query.cpp
+  src/telegram/node-message.cpp
   src/telegram/common.cpp
   src/telegram/basic.cpp
   src/telegram/media.cpp

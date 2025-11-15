@@ -3,75 +3,14 @@
 
 #include <string>
 #include <vector>
+#include <deque>
+
 #include "type.hpp"
+#include "function.hpp"
+#include "node-message.hpp"
+#include "keyboard.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
-
-class TKeyboard
-{
-public:
-    typedef enum _TKeyType_t
-    {
-        KEYBOARD = 0,
-        INLINE_KEYBOARD = 1
-    } TKeyType_t;
-
-    typedef enum _TValueType_t
-    {
-        COMMON = 0,
-        URL = 1,
-        CALLBACK_QUERY = 2
-    } TValueType_t;
-
-    typedef struct _TKeyButtonConstructor_t
-    {
-        TValueType_t type;
-        std::string text;
-        std::string value;
-    } TKeyButtonConstructor_t;
-
-    TKeyboard(TKeyType_t type, const std::string &caption);
-    ~TKeyboard();
-    bool addButton(const std::string &button);
-    bool addButton(TValueType_t type, const std::string &text, const std::string &value);
-    bool addButton(const TKeyButtonConstructor_t &button);
-    bool addButton(const std::vector<TKeyButtonConstructor_t> &buttons);
-    const std::string &getCaption() const;
-    std::string getMarkup() const;
-
-private:
-    TKeyType_t type;
-    std::string caption;
-    std::vector<std::string> buttons;
-};
-
-class NodeMessage
-{
-public:
-    long long updateId;
-    CallbackQuery *callbackQuery;
-    Message *message;
-    NodeMessage *next;
-
-    NodeMessage(const std::string &message);
-    void display() const;
-};
-
-class Messages
-{
-private:
-    size_t n;
-    NodeMessage *first;
-    NodeMessage *end;
-
-public:
-    Messages();
-    ~Messages();
-    void enqueue(const std::string &message);
-    void dequeue();
-    void clear();
-    const NodeMessage *getMessage() const;
-};
 
 class Telegram
 {
@@ -97,9 +36,9 @@ public:
         DOCUMENT
     } MediaType_t;
 
-    Messages message;
-    void *webhookCallback;
-    void *webhookCallbackData;
+    Function webhookCallback;
+    std::deque<NodeMessage> messages;
+
     Telegram(const std::string &token);
     ~Telegram();
     long long getId();
@@ -127,7 +66,7 @@ public:
     bool apiSetWebhook(const std::string &url, unsigned short maxConnection);
     bool apiSetWebhook(const std::string &url);
     bool apiUnsetWebhook();
-    void setWebhookCallback(void (*__callback)(Telegram &, void *), void *data);
+    void setWebhookCallback(const Function &func);
     void servWebhook();
 
     bool apiSendKeyboard(long long targetId, const TKeyboard &keyboard);
