@@ -24,8 +24,23 @@ bool CallbackQuery::parse(const nlohmann::json &json)
     {
         JSONValidator jvalidator(__FILE__, __LINE__, __func__);
 
-        this->id = jvalidator.get<long long>(json, "id");
-        this->chatInstance = jvalidator.get<std::string>(json, "chat_instance");
+        try
+        {
+            this->id = jvalidator.get<long long>(json, "id");
+        }
+        catch (const std::exception &e)
+        {
+            this->id = std::stoll(jvalidator.get<std::string>(json, "id"));
+        }
+
+        try
+        {
+            this->chatInstance = jvalidator.get<std::string>(json, "chat_instance");
+        }
+        catch (const std::exception &e)
+        {
+            this->chatInstance = std::stoll(jvalidator.get<std::string>(json, "chat_instance"));
+        }
         this->data = jvalidator.get<std::string>(json, "data");
 
         const nlohmann::json &jsonFrom = jvalidator.getObject(json, "from");
