@@ -101,6 +101,34 @@ bool TKeyboard::addButton(const std::vector<TKeyButtonConstructor_t> &buttons)
     return true;
 }
 
+TKeyboard &TKeyboard::add(const std::string &button)
+{
+    if (!(this->addButton(button)))
+        throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
+    return *this;
+}
+
+TKeyboard &TKeyboard::add(TValueType_t type, const std::string &text, const std::string &value)
+{
+    if (!(this->addButton(type, text, value)))
+        throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
+    return *this;
+}
+
+TKeyboard &TKeyboard::add(const TKeyButtonConstructor_t &button)
+{
+    if (!(this->addButton(button)))
+        throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
+    return *this;
+}
+
+TKeyboard &TKeyboard::add(const std::vector<TKeyButtonConstructor_t> &buttons)
+{
+    if (!(this->addButton(buttons)))
+        throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
+    return *this;
+}
+
 const std::string &TKeyboard::getCaption() const
 {
     return this->caption;
