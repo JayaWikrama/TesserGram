@@ -14,23 +14,27 @@
 
 ### 2. Basic Bot Functionality
 - Receive updates using `getUpdates`
-- Send text messages via `sendMessage`
+- Send text messages via `apiSendMessage`
 
 ```c++
 ...
 ...
-if (telegram.apiGetUpdates()){
-    const NodeMessage *msg = telegram.message.getMessage();
-    while (msg){
-        msg->display();
-        if (ptr == nullptr){
-            std::string reply = getReplay(msg->message); // get your custom reply
-            telegram.apiSendMessage(msg->room.id, reply);
-        }
-        telegram.message.dequeue();
-        msg = telegram.message.getMessage();
-    }
-}
+telegram.getUpdates(
+    [](Telegram &t, const NodeMessage &message)
+    {
+        message.display();
+        message
+            .processMessage(
+                [&](const Message &m)
+                {
+                    t.apiSendMessage(m.chat.id, "Hi...");
+                })
+            .processCallbackQuery(
+                [&](const CallbackQuery &c)
+                {
+                    t.apiSendMessage(c.message->chat.id, "Hello...");
+                });
+    });
 ...
 ...
 ```
@@ -46,19 +50,18 @@ Support for `sendChatAction` to display user activity:
 ```c++
 ...
 ...
-if (telegram.apiGetUpdates()){
-    const NodeMessage *msg = telegram.message.getMessage();
-    while (msg){
-        msg->display();
-        if (ptr == nullptr){
-            telegram.apiSendChatAction(msg->room.id, Telegram::TYPING); // send typing action while create an reply
-            std::string reply = getReplay(msg->message);
-            telegram.apiSendMessage(msg->room.id, reply);
-        }
-        telegram.message.dequeue();
-        msg = telegram.message.getMessage();
-    }
-}
+telegram.getUpdates(
+    [](Telegram &t, const NodeMessage &message)
+    {
+        message.display();
+        message
+            .processMessage(
+                [&](const Message &m)
+                {
+                    t.apiSendChatAction(m.room.id, Telegram::TYPING); // send typing action while create an reply
+                    t.apiSendMessage(m.chat.id, "Hi...");
+                });
+    });
 ...
 ...
 ```
@@ -73,9 +76,27 @@ Webhook support as an alternative to polling, for real-time updates.
 ```c++
 ...
 ...
-telegram.setWebhookCallback(updatesCallback, nullptr); // Sets the callback function to be executed when a new message is received.
-telegram.apiSetWebhook(url); // Defines the webhook URL where Telegram will send incoming update messages.
-telegram.servWebhook(); // Starts the webhook server to listen for incoming connections from Telegram.
+/* Sets the callback function to be executed when a new message is received */
+telegram.setWebhookCallback(
+    [this](Telegram &telegram, const NodeMessage &message)
+    {
+        message.display();
+        message
+            .processMessage(
+                [&](const Message &m)
+                {
+                    t.apiSendMessage(m.chat.id, "Hi...");
+                })
+            .processCallbackQuery(
+                [&](const CallbackQuery &c)
+                {
+                    t.apiSendMessage(c.message->chat.id, "Hello...");
+                });
+    });
+/* Defines the webhook URL where Telegram will send incoming update messages */
+telegram.apiSetWebhook(url);
+/* Starts the webhook server to listen for incoming connections from Telegram */
+telegram.servWebhook();
 ...
 ...
 ```
@@ -114,9 +135,10 @@ Send reply keyboards for interactive user input using `sendKeyboard`.
 ...
 ...
 TKeyboard keyboard(TKeyboard::KEYBOARD, "Test Keyboard!");
-keyboard.addButton("[ \"Key-1\", \"Key-2\" ]");
-keyboard.addButton("[ \"Key-3\" ]");
-keyboard.addButton("[ \"Key-4\" ]");
+keyboard
+    .add("[ \"Key-1\", \"Key-2\" ]")
+    .add("[ \"Key-3\" ]")
+    .add("[ \"Key-4\" ]");
 telegram.apiSendKeyboard(<chat_room>, keyboard);
 ...
 ...
@@ -134,19 +156,13 @@ Send inline buttons with callbacks or URLs using `sendInlineKeyboard`.
 ...
 TKeyboard keyboard(TKeyboard::INLINE_KEYBOARD, "Test Keyboard!");
 
-keyboard.addButton(TKeyboard::URL, "Google", "www.google.com");
+std::vector<TKeyboard::TKeyButton> buttons;
+buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::CALLBACK_QUERY, "No!", "no"));
+buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::CALLBACK_QUERY, "Yes!", "yes"));
 
-TKeyboard::TKeyButtonConstructor_t button;
-std::vector <TKeyboard::TKeyButtonConstructor_t> buttons;
-button.type = TKeyboard::CALLBACK_QUERY;
-button.text = "No!";
-button.value = "no";
-buttons.push_back(button);
-button.type = TKeyboard::CALLBACK_QUERY;
-button.text = "Yes!";
-button.value = "yes";
-buttons.push_back(button);
-keyboard.addButton(buttons);
+keyboard
+    .add(TKeyboard::TKeyButton::URL, "Google", "www.google.com")
+    .add(buttons);
 
 telegram.apiSendKeyboard(<chat_room>, keyboard);
 ...
@@ -172,6 +188,7 @@ Ensure you have `g++`, `libcurl`, and `pthread` installed.
 
 ```bash
 git clone https://github.com/JayaWikrama/TesserGram.git
+git submodule update --init --recursive
 
 cd TesserGram
 mkdir build
@@ -220,9 +237,7 @@ std::string token = "your_token";
 int main(int argc, char **argv){
     Telegram telegram(token);
     if (telegram.apiGetMe()){
-        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Id: %lli\n", telegram.getId());
-        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Name: %s\n", telegram.getName().c_str());
-        debug.log(Debug::INFO, __PRETTY_FUNCTION__, "Telegram Bot Username: %s\n", telegram.getUsername().c_str());
+        telegram.info();
     }
     else {
         debug.log(Debug::ERROR, __PRETTY_FUNCTION__, "Failed to access telegram!\n");
