@@ -7,6 +7,25 @@
 #include "json-validator.hpp"
 #include "nlohmann/json.hpp"
 
+TKeyboard::TKeyButton::TKeyButton(TKeyboard::TKeyButton::TValueType_t type, const std::string &text, const std::string &value) : type(type), text(text), value(value) {}
+
+TKeyboard::TKeyButton::~TKeyButton() {}
+
+TKeyboard::TKeyButton::TValueType_t TKeyboard::TKeyButton::getType() const
+{
+    return this->type;
+}
+
+const std::string &TKeyboard::TKeyButton::getText() const
+{
+    return this->text;
+}
+
+const std::string &TKeyboard::TKeyButton::getValue() const
+{
+    return this->value;
+}
+
 TKeyboard::TKeyboard(TKeyboard::TKeyType_t type, const std::string &caption)
 {
     this->type = type;
@@ -37,18 +56,18 @@ bool TKeyboard::addButton(const std::string &button)
     return false;
 }
 
-bool TKeyboard::addButton(TKeyboard::TValueType_t type, const std::string &text, const std::string &value)
+bool TKeyboard::addButton(TKeyboard::TKeyButton::TValueType_t type, const std::string &text, const std::string &value)
 {
     if (this->type != TKeyboard::INLINE_KEYBOARD)
         return false;
-    if (type == TKeyboard::URL)
+    if (type == TKeyboard::TKeyButton::URL)
     {
         nlohmann::json json;
         json["text"] = text;
         json["url"] = value;
         this->buttons.push_back("[" + json.dump() + "]");
     }
-    else if (type == TKeyboard::CALLBACK_QUERY)
+    else if (type == TKeyboard::TKeyButton::CALLBACK_QUERY)
     {
         nlohmann::json json;
         json["text"] = text;
@@ -60,44 +79,41 @@ bool TKeyboard::addButton(TKeyboard::TValueType_t type, const std::string &text,
     return true;
 }
 
-bool TKeyboard::addButton(const TKeyButtonConstructor_t &button)
+bool TKeyboard::addButton(const TKeyboard::TKeyButton &button)
 {
-    return addButton(button.type, button.text, button.value);
+    return addButton(button.getType(), button.getText(), button.getValue());
 }
 
-bool TKeyboard::addButton(const std::vector<TKeyButtonConstructor_t> &buttons)
+bool TKeyboard::addButton(const std::vector<TKeyboard::TKeyButton> &buttons)
 {
     if (this->type != TKeyboard::INLINE_KEYBOARD)
         return false;
-    size_t sz = buttons.size();
-    if (sz == 0)
+
+    if (buttons.size() == 0)
         return false;
-    std::string result = "[";
-    sz--;
-    for (int i = 0; i < sz; i++)
+
+    nlohmann::json arr = nlohmann::json::array();
+    for (const TKeyboard::TKeyButton &button : buttons)
     {
-        if (buttons.at(i).type == TKeyboard::URL)
+        nlohmann::json jsonButton;
+        if (button.getType() == TKeyboard::TKeyButton::URL)
         {
-            result += "{\"text\":\"" + buttons.at(i).text + "\",\"url\":\"" + buttons.at(i).value + "\"},";
+            jsonButton = {
+                {"text", button.getText()},
+                {"url", button.getValue()}};
         }
-        else if (buttons.at(i).type == TKeyboard::CALLBACK_QUERY)
+        else if (button.getType() == TKeyboard::TKeyButton::CALLBACK_QUERY)
         {
-            result += "{\"text\":\"" + buttons.at(i).text + "\",\"callback_data\":\"" + buttons.at(i).value + "\"},";
+            jsonButton = {
+                {"text", button.getText()},
+                {"callback_data", button.getValue()}};
         }
         else
             return false;
+        arr.push_back(jsonButton);
     }
-    if (buttons.at(sz).type == TKeyboard::URL)
-    {
-        result += "{\"text\":\"" + buttons.at(sz).text + "\",\"url\":\"" + buttons.at(sz).value + "\"},";
-    }
-    else if (buttons.at(sz).type == TKeyboard::CALLBACK_QUERY)
-    {
-        result += "{\"text\":\"" + buttons.at(sz).text + "\",\"callback_data\":\"" + buttons.at(sz).value + "\"}]";
-    }
-    else
-        return false;
-    this->buttons.push_back(result);
+
+    this->buttons.push_back(arr.dump());
     return true;
 }
 
@@ -108,21 +124,21 @@ TKeyboard &TKeyboard::add(const std::string &button)
     return *this;
 }
 
-TKeyboard &TKeyboard::add(TValueType_t type, const std::string &text, const std::string &value)
+TKeyboard &TKeyboard::add(TKeyboard::TKeyButton::TValueType_t type, const std::string &text, const std::string &value)
 {
     if (!(this->addButton(type, text, value)))
         throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
     return *this;
 }
 
-TKeyboard &TKeyboard::add(const TKeyButtonConstructor_t &button)
+TKeyboard &TKeyboard::add(const TKeyboard::TKeyButton &button)
 {
     if (!(this->addButton(button)))
         throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
     return *this;
 }
 
-TKeyboard &TKeyboard::add(const std::vector<TKeyButtonConstructor_t> &buttons)
+TKeyboard &TKeyboard::add(const std::vector<TKeyboard::TKeyButton> &buttons)
 {
     if (!(this->addButton(buttons)))
         throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
@@ -136,31 +152,46 @@ const std::string &TKeyboard::getCaption() const
 
 std::string TKeyboard::getMarkup() const
 {
-    size_t sz = this->buttons.size();
-    std::string result = "";
-    if (sz)
+    nlohmann::json arr = nlohmann::json::array();
+
+    try
     {
-        result = this->type == TKeyboard::KEYBOARD ? "{\"keyboard\":[" : "{\"inline_keyboard\":[";
-        sz--;
-        for (int i = 0; i < sz; i++)
+        for (const std::string &button : this->buttons)
         {
-            result += this->buttons.at(i) + ",";
+            nlohmann::json jsonButton = nlohmann::json::parse(button);
+            arr.push_back(jsonButton);
         }
-        result += this->buttons.at(sz) + "]}";
     }
-    return result;
+    catch (const std::exception &e)
+    {
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "parse button failed\n");
+        return "";
+    }
+
+    nlohmann::json result;
+    if (this->type == TKeyboard::KEYBOARD)
+        result["keyboard"] = arr;
+    else
+        result["inline_keyboard"] = arr;
+
+    return result.dump();
 }
 
 bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard)
 {
     std::string replayMarkup = keyboard.getMarkup();
-    if (replayMarkup.length() == 0)
+    if (replayMarkup.empty())
     {
         Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "invalid keyboard!\n");
         return false;
     }
-    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"text\":\"" + keyboard.getCaption() + "\",\"reply_markup\":" + replayMarkup + "}";
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, data);
+
+    nlohmann::json json = {
+        {"chat_id", targetId},
+        {"text", keyboard.getCaption()},
+        {"reply_markup", nlohmann::json::parse(replayMarkup)}};
+
+    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, json.dump());
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");
@@ -172,13 +203,19 @@ bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard)
 bool Telegram::apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard)
 {
     std::string replayMarkup = keyboard.getMarkup();
-    if (replayMarkup.length() == 0)
+    if (replayMarkup.empty())
     {
         Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "invalid keyboard!\n");
         return false;
     }
-    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"message_id\":" + std::to_string(messageId) + ",\"text\":\"" + keyboard.getCaption() + "\",\"reply_markup\":" + replayMarkup + "}";
-    Request req(TELEGRAM_BASE_URL, this->token, Request::EDIT_MESSAGE_TEXT, data);
+
+    nlohmann::json json = {
+        {"chat_id", targetId},
+        {"message_id", messageId},
+        {"text", keyboard.getCaption()},
+        {"reply_markup", nlohmann::json::parse(replayMarkup)}};
+
+    Request req(TELEGRAM_BASE_URL, this->token, Request::EDIT_MESSAGE_TEXT, json.dump());
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");
