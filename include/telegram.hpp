@@ -4,11 +4,13 @@
 #include <string>
 #include <vector>
 #include <deque>
+#include <mutex>
+#include <functional>
 
 #include "type.hpp"
-#include "function.hpp"
 #include "node-message.hpp"
 #include "keyboard.hpp"
+#include "polling-controller.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
 
@@ -36,14 +38,19 @@ public:
         DOCUMENT
     } MediaType_t;
 
-    Function webhookCallback;
-    std::deque<NodeMessage> messages;
-
+    Telegram();
     Telegram(const std::string &token);
     ~Telegram();
-    long long getId();
+
+    void setToken(const std::string &token);
+
+    long long getId() const;
     const std::string &getName() const;
     const std::string &getUsername() const;
+    void info() const;
+
+    bool getUpdates(std::function<void(Telegram &, const NodeMessage &)> handler);
+    void getUpdatesPoll(std::function<void(Telegram &, const NodeMessage &)> handler);
 
     bool apiGetMe();
     bool apiGetUpdates();
@@ -66,11 +73,14 @@ public:
     bool apiSetWebhook(const std::string &url, unsigned short maxConnection);
     bool apiSetWebhook(const std::string &url);
     bool apiUnsetWebhook();
-    void setWebhookCallback(const Function &func);
+    void setWebhookCallback(std::function<void(Telegram &, const NodeMessage &)> handler);
+    void execWebhookCallback();
     void servWebhook();
 
     bool apiSendKeyboard(long long targetId, const TKeyboard &keyboard);
     bool apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard);
+
+    bool parseGetUpdatesResponse(const std::string &buffer);
 
 private:
     long long id;
@@ -78,6 +88,13 @@ private:
     std::string name;
     std::string username;
     std::string token;
+
+    std::function<void(Telegram &, const NodeMessage &)> webhookCallback;
+    std::deque<NodeMessage> messages;
+
+    PollingController controller;
+
+    mutable std::mutex mutex;
 
     bool __apiSendMedia(long long targetId, MediaType_t type, const std::string &label, const std::string &filePath);
     bool __parseGetUpdatesResponse(const std::string &buffer);

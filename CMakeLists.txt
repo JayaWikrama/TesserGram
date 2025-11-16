@@ -44,7 +44,7 @@ endif()
 set(SOURCE_FILES
   src/fetch-api.cpp
   src/request.cpp
-  src/function.cpp
+  src/polling-controller.cpp
   src/type/user.cpp
   src/type/chat.cpp
   src/type/media.cpp

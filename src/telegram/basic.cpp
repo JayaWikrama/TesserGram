@@ -59,6 +59,12 @@ bool Telegram::__parseGetUpdatesResponse(const std::string &buffer)
     return false;
 }
 
+bool Telegram::parseGetUpdatesResponse(const std::string &buffer)
+{
+    std::lock_guard<std::mutex> guard(this->mutex);
+    return this->__parseGetUpdatesResponse(buffer);
+}
+
 bool Telegram::apiGetMe()
 {
     Request req(TELEGRAM_BASE_URL, this->token, Request::CONFIG);
@@ -86,6 +92,7 @@ bool Telegram::apiGetMe()
 
 bool Telegram::apiGetUpdates()
 {
+    std::lock_guard<std::mutex> guard(this->mutex);
     if (this->lastUpdateId > 0)
     {
         std::string data = "{\"offset\":" + std::to_string(this->lastUpdateId + 1) + "}";
