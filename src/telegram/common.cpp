@@ -56,6 +56,14 @@ void Telegram::info() const
     Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Bot Username: %s\n", this->getUsername().c_str());
 }
 
+void Telegram::clearUpdates()
+{
+    if (this->apiGetUpdates())
+    {
+        this->messages.clear();
+    }
+}
+
 bool Telegram::getUpdates(std::function<void(Telegram &, const NodeMessage &)> handler)
 {
     if (this->apiGetUpdates())

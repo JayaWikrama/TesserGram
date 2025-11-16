@@ -49,6 +49,7 @@ public:
     const std::string &getUsername() const;
     void info() const;
 
+    void clearUpdates();
     bool getUpdates(std::function<void(Telegram &, const NodeMessage &)> handler);
     void getUpdatesPoll(std::function<void(Telegram &, const NodeMessage &)> handler);
 
