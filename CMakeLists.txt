@@ -102,6 +102,11 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib utils-ar)
 target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES} -lpthread)
 
 ## Send Message Example
+add_executable(${PROJECT_NAME}-receive-message examples/receive-message.cpp)
+target_link_libraries(${PROJECT_NAME}-receive-message PRIVATE ${PROJECT_NAME}-lib utils-ar)
+target_link_libraries(${PROJECT_NAME}-receive-message PUBLIC ${CURL_LIBRARIES} -lpthread)
+
+## Send Message Example
 add_executable(${PROJECT_NAME}-send-message examples/send-message.cpp)
 target_link_libraries(${PROJECT_NAME}-send-message PRIVATE ${PROJECT_NAME}-lib utils-ar)
 target_link_libraries(${PROJECT_NAME}-send-message PUBLIC ${CURL_LIBRARIES} -lpthread)
