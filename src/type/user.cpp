@@ -29,7 +29,8 @@ bool User::parse(const nlohmann::json &json)
         if (json.contains("last_name"))
             this->lastName = jvalidator.get<std::string>(json, "last_name");
         this->username = jvalidator.get<std::string>(json, "username");
-        this->languageCode = jvalidator.get<std::string>(json, "language_code");
+        if (json.contains("language_code"))
+            this->languageCode = jvalidator.get<std::string>(json, "language_code");
         return true;
     }
     catch (const std::exception &e)
