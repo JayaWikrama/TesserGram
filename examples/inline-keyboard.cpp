@@ -17,14 +17,14 @@ int main(int argc, char **argv)
     {
         telegram.info();
 
-        TKeyboard keyboard(TKeyboard::INLINE_KEYBOARD, "Test Keyboard!");
+        TKeyboard keyboard(TKeyboard::Type::INLINE_KEYBOARD, "Test Keyboard!");
 
         std::vector<TKeyboard::TKeyButton> buttons;
-        buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::CALLBACK_QUERY, "No!", "no"));
-        buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::CALLBACK_QUERY, "Yes!", "yes"));
+        buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::Type::CALLBACK_QUERY, "No!", "no"));
+        buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::Type::CALLBACK_QUERY, "Yes!", "yes"));
 
         keyboard
-            .add(TKeyboard::TKeyButton::URL, "Google", "www.google.com")
+            .add(TKeyboard::TKeyButton::Type::URL, "Google", "www.google.com")
             .add(buttons);
 
         telegram.apiSendKeyboard(env["bot"]["target_id"].get<long long>(), keyboard);

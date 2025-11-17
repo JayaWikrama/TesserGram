@@ -3,10 +3,24 @@
 #include "json-validator.hpp"
 #include "utils/include/debug.hpp"
 
+namespace
+{
+    static const std::array<std::string, 7> chatActionNames = {
+        "typing",
+        "upload_photo",
+        "record_video",
+        "upload_video",
+        "record_voice",
+        "upload_voice",
+        "upload_document"};
+
+    static const std::string unknownChatActionName = "unknown";
+}
+
 Chat::Chat()
 {
     this->isForum = false;
-    this->type = Chat::PRIVATE;
+    this->type = Chat::Type::PRIVATE;
     this->id = 0;
 }
 
@@ -29,11 +43,11 @@ bool Chat::parse(const nlohmann::json &json)
         {
             std::string chatType = jvalidator.get<std::string>(json, "type");
             if (chatType.compare("group") == 0)
-                this->type = Chat::GROUP;
+                this->type = Chat::Type::GROUP;
             else if (chatType.compare("supergroup") == 0)
-                this->type == Chat::SUPERGROUP;
+                this->type == Chat::Type::SUPERGROUP;
             else if (chatType.compare("channel") == 0)
-                this->type = Chat::CHANNEL;
+                this->type = Chat::Type::CHANNEL;
         }
 
         this->id = jvalidator.get<long long>(json, "id");
@@ -42,7 +56,7 @@ bool Chat::parse(const nlohmann::json &json)
             this->lastName = jvalidator.get<std::string>(json, "last_name");
         this->username = jvalidator.get<std::string>(json, "username");
 
-        if (this->type != Chat::PRIVATE)
+        if (this->type != Chat::Type::PRIVATE)
             this->title = jvalidator.get<std::string>(json, "title");
         else
         {
@@ -65,10 +79,21 @@ bool Chat::parse(const nlohmann::json &json)
 void Chat::reset()
 {
     this->isForum = false;
-    this->type = Chat::PRIVATE;
+    this->type = Chat::Type::PRIVATE;
     this->id = 0;
     this->firstName.clear();
     this->lastName.clear();
     this->username.clear();
     this->title.clear();
+}
+
+const std::string &Chat::actionToString(const Chat::Action &action)
+{
+    std::size_t index = static_cast<std::size_t>(action);
+
+    if (index < chatActionNames.size())
+    {
+        return chatActionNames[index];
+    }
+    return unknownChatActionName;
 }

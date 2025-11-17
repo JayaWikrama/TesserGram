@@ -17,27 +17,6 @@
 class Telegram
 {
 public:
-    typedef enum _ChatAction_t
-    {
-        TYPING = 0,
-        UPLOAD_PHOTO,
-        RECORD_VIDEO,
-        UPLOAD_VIDEO,
-        RECORD_VOICE,
-        UPLOAD_VOICE,
-        UPLOAD_DOCUMENT
-    } ChatAction_t;
-
-    typedef enum _MediaType_t
-    {
-        PHOTO = 0,
-        AUDIO,
-        VOICE,
-        ANIMATION,
-        VIDEO,
-        DOCUMENT
-    } MediaType_t;
-
     Telegram();
     Telegram(const std::string &token);
     ~Telegram();
@@ -57,7 +36,7 @@ public:
     bool apiGetUpdates();
     bool apiSendMessage(long long targetId, const std::string &message);
     bool apiEditMessageText(long long targetId, long long messageId, const std::string &message);
-    bool apiSendChatAction(long long targetId, ChatAction_t action);
+    bool apiSendChatAction(long long targetId, Chat::Action action);
 
     bool apiSendDocument(long long targetId, const std::string &label, const std::string &filePath);
     bool apiSendPhoto(long long targetId, const std::string &label, const std::string &filePath);
@@ -97,7 +76,7 @@ private:
 
     mutable std::mutex mutex;
 
-    bool __apiSendMedia(long long targetId, MediaType_t type, const std::string &label, const std::string &filePath);
+    bool __apiSendMedia(long long targetId, Media::Type type, const std::string &label, const std::string &filePath);
     bool __parseGetUpdatesResponse(const std::string &buffer);
 };
 

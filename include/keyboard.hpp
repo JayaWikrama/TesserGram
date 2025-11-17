@@ -7,39 +7,39 @@
 class TKeyboard
 {
 public:
-    typedef enum _TKeyType_t
+    enum class Type : uint8_t
     {
-        KEYBOARD = 0,
-        INLINE_KEYBOARD = 1
-    } TKeyType_t;
+        KEYBOARD = 0x00,
+        INLINE_KEYBOARD = 0x01
+    };
 
     class TKeyButton
     {
     public:
-        typedef enum _TValueType_t
+        enum class Type : uint8_t
         {
             COMMON = 0,
             URL = 1,
             CALLBACK_QUERY = 2
-        } TValueType_t;
+        };
 
-        TKeyButton(TValueType_t type, const std::string &text, const std::string &value);
+        TKeyButton(Type type, const std::string &text, const std::string &value);
         ~TKeyButton();
-        TValueType_t getType() const;
+        Type getType() const;
         const std::string &getText() const;
         const std::string &getValue() const;
 
     private:
-        TValueType_t type;
+        Type type;
         std::string text;
         std::string value;
     };
 
-    TKeyboard(TKeyType_t type, const std::string &caption);
+    TKeyboard(Type type, const std::string &caption);
     ~TKeyboard();
 
     TKeyboard &add(const std::string &button);
-    TKeyboard &add(TKeyButton::TValueType_t type, const std::string &text, const std::string &value);
+    TKeyboard &add(TKeyButton::Type type, const std::string &text, const std::string &value);
     TKeyboard &add(const TKeyButton &button);
     TKeyboard &add(const std::vector<TKeyButton> &buttons);
 
@@ -47,12 +47,12 @@ public:
     std::string getMarkup() const;
 
 private:
-    TKeyType_t type;
+    Type type;
     std::string caption;
     std::vector<std::string> buttons;
 
     bool addButton(const std::string &button);
-    bool addButton(TKeyButton::TValueType_t type, const std::string &text, const std::string &value);
+    bool addButton(TKeyButton::Type type, const std::string &text, const std::string &value);
     bool addButton(const TKeyButton &button);
     bool addButton(const std::vector<TKeyButton> &buttons);
 };

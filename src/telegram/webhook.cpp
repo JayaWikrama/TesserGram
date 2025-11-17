@@ -44,7 +44,7 @@ bool Telegram::apiSetWebhook(const std::string &url, const std::string &secretTo
         json["allowed_updates"] = allowedUpdates;
     if (maxConnection > 0)
         json["max_connections"] = maxConnection;
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SET_WEBHOOK, json.dump());
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::SET_WEBHOOK, json.dump());
     if (req.isSuccess())
     {
 
@@ -71,7 +71,7 @@ bool Telegram::apiSetWebhook(const std::string &url)
 
 bool Telegram::apiUnsetWebhook()
 {
-    Request req(TELEGRAM_BASE_URL, this->token, Request::UNSET_WEBHOOK, std::string("{\"drop_pending_updates\":true}"));
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UNSET_WEBHOOK, std::string("{\"drop_pending_updates\":true}"));
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");

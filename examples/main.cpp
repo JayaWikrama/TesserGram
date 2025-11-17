@@ -69,7 +69,7 @@ private:
             .processMessage(
                 [&](const Message &m)
                 {
-                    telegram.apiSendChatAction(m.chat.id, Telegram::TYPING);
+                    telegram.apiSendChatAction(m.chat.id, Chat::Action::TYPING);
                     if (m.text.length() > 0)
                     {
                         std::string reply = this->getReplay(m.text);
@@ -80,7 +80,7 @@ private:
             .processCallbackQuery(
                 [&](const CallbackQuery &c)
                 {
-                    telegram.apiSendChatAction(c.message->chat.id, Telegram::TYPING);
+                    telegram.apiSendChatAction(c.message->chat.id, Chat::Action::TYPING);
                     std::string reply = this->getReplay(c.data);
                     telegram.apiSendMessage(c.message->chat.id, reply);
                 });

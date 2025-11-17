@@ -68,32 +68,34 @@ bool Message::parse(const nlohmann::json &json)
             }
         }
 
-        for (const struct MediaTypeEntry &entry : mediaTypes)
-        {
-            if (json.contains(entry.key) == false)
-                continue;
-
-            const nlohmann::json j = json[entry.key];
-            if (j.is_array())
+        Media::typeIteration(
+            [&](const Media::Type &type, const std::string &name)
             {
-                for (const nlohmann::json &el : j)
+                if (json.contains(name))
                 {
-                    Media md;
-                    if (md.parse(entry.type, el))
+                    const nlohmann::json j = json[name];
+                    if (j.is_array())
                     {
-                        this->media.push_back(md);
+                        for (const nlohmann::json &el : j)
+                        {
+                            Media md;
+                            if (md.parse(type, el))
+                            {
+                                this->media.push_back(md);
+                            }
+                        }
+                    }
+                    else if (j.is_object())
+                    {
+                        Media md;
+                        if (md.parse(type, j))
+                        {
+                            this->media.push_back(md);
+                        }
                     }
                 }
-            }
-            else if (j.is_object())
-            {
-                Media md;
-                if (md.parse(entry.type, j))
-                {
-                    this->media.push_back(md);
-                }
-            }
-        }
+            });
+
         return true;
     }
     catch (const std::exception &e)

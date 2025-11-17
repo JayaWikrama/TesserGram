@@ -26,9 +26,9 @@ static const char *reqStr[] = {
     "setWebhook",
     "deleteWebhook"};
 
-Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req)
+Request::Request(const std::string &url, const std::string &token, Request::Type req)
 {
-    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[req];
+    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(req)];
     FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
     api.setHiddenConfidential(token);
     this->success = api.get();
@@ -38,9 +38,9 @@ Request::Request(const std::string &url, const std::string &token, Request::REQU
     }
 }
 
-Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req, const std::string &data)
+Request::Request(const std::string &url, const std::string &token, Request::Type req, const std::string &data)
 {
-    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[req];
+    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(req)];
     FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
     api.setHiddenConfidential(token);
     api.insertHeader("Content-Type", "application/json");
@@ -52,9 +52,9 @@ Request::Request(const std::string &url, const std::string &token, Request::REQU
     }
 }
 
-Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req, const nlohmann::json &data)
+Request::Request(const std::string &url, const std::string &token, Request::Type req, const nlohmann::json &data)
 {
-    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[req];
+    this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(req)];
     FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
     api.setHiddenConfidential(token);
     api.setBody(data.dump());
@@ -65,13 +65,13 @@ Request::Request(const std::string &url, const std::string &token, Request::REQU
     }
 }
 
-Request::Request(const std::string &url, const std::string &token, Request::REQUEST_t req, const std::string &ref, std::vector<unsigned char> &data)
+Request::Request(const std::string &url, const std::string &token, Request::Type req, const std::string &ref, std::vector<unsigned char> &data)
 {
     std::string mediaPath = ref;
     this->success = false;
-    if (req == Request::DOWNLOAD_MEDIA_BY_FILE_ID)
+    if (req == Request::Type::DOWNLOAD_MEDIA_BY_FILE_ID)
     {
-        this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[Request::GET_MEDIA_PATH];
+        this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(Request::Type::GET_MEDIA_PATH)];
         FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
         api.setHiddenConfidential(token);
         nlohmann::json data;
@@ -89,7 +89,7 @@ Request::Request(const std::string &url, const std::string &token, Request::REQU
                 mediaPath = jvalidator.get<std::string>(jsonResult, "file_path", "result");
 
                 this->response = mediaPath;
-                req = Request::DOWNLOAD_MEDIA_BY_PATH;
+                req = Request::Type::DOWNLOAD_MEDIA_BY_PATH;
             }
             catch (const std::exception &e)
             {
@@ -102,7 +102,7 @@ Request::Request(const std::string &url, const std::string &token, Request::REQU
             return;
         }
     }
-    if (req == Request::DOWNLOAD_MEDIA_BY_PATH)
+    if (req == Request::Type::DOWNLOAD_MEDIA_BY_PATH)
     {
         this->url = url + (url.at(url.length() - 1) == '/' ? "file/bot" : "/file/bot") + token + "/" + mediaPath;
         FetchAPI api(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);

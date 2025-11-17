@@ -11,19 +11,19 @@
 class FetchAPI
 {
 public:
-  typedef enum __FetchErrorCode_t
+  enum class ReturnCode : uint8_t
   {
-    FETCH_OK = 0,
-    FETCH_ERR_INVALID_URL,
-    FETCH_ERR_TIMEOUT,
-    FETCH_ERR_CONNECTION,
-    FETCH_ERR_SEND_FAILED,
-    FETCH_ERR_RECV_FAILED,
-    FETCH_ERR_HTTP_ERROR,
-    FETCH_ERR_PARSE_RESPONSE,
-    FETCH_ERR_UNSUPPORTED_PROTOCOL,
-    FETCH_ERR_UNKNOWN
-  } FetchErrorCode_t;
+    FETCH_OK = 0x00,
+    FETCH_ERR_INVALID_URL = 0x01,
+    FETCH_ERR_TIMEOUT = 0x02,
+    FETCH_ERR_CONNECTION = 0x03,
+    FETCH_ERR_SEND_FAILED = 0x04,
+    FETCH_ERR_RECV_FAILED = 0x05,
+    FETCH_ERR_HTTP_ERROR = 0x06,
+    FETCH_ERR_PARSE_RESPONSE = 0x07,
+    FETCH_ERR_UNSUPPORTED_PROTOCOL = 0x08,
+    FETCH_ERR_UNKNOWN = 0x09
+  };
 
 private:
   std::string url;
@@ -31,7 +31,7 @@ private:
   unsigned short totalTimeout;
   std::string payload;
   std::string errorMsg;
-  FetchErrorCode_t errorCode;
+  ReturnCode code;
   std::map<std::string, std::string> headers;
   std::string body;
   mutable std::mutex mutex;
@@ -78,7 +78,7 @@ public:
 
   std::string getPayload();
   std::string getError();
-  FetchErrorCode_t getErrorCode();
+  ReturnCode getErrorCode();
 };
 
 #endif

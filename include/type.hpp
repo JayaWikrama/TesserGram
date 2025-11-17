@@ -5,6 +5,7 @@
 #include <vector>
 #include <ctime>
 #include <memory>
+#include <functional>
 #include "nlohmann/json_fwd.hpp"
 
 class User
@@ -27,16 +28,27 @@ public:
 class Chat
 {
 public:
-    typedef enum _TYPE_t
+    enum class Action : uint8_t
     {
-        PRIVATE = 0,
-        GROUP,
-        SUPERGROUP,
-        CHANNEL
-    } TYPE_t;
+        TYPING = 0x00,
+        UPLOAD_PHOTO = 0x01,
+        RECORD_VIDEO = 0x02,
+        UPLOAD_VIDEO = 0x03,
+        RECORD_VOICE = 0x04,
+        UPLOAD_VOICE = 0x05,
+        UPLOAD_DOCUMENT = 0x06
+    };
+
+    enum class Type : uint8_t
+    {
+        PRIVATE = 0x00,
+        GROUP = 0x01,
+        SUPERGROUP = 0x02,
+        CHANNEL = 0x03
+    };
 
     bool isForum;
-    TYPE_t type;
+    Type type;
     long long id;
     std::string title;
     std::string firstName;
@@ -48,26 +60,28 @@ public:
     bool empty() const;
     bool parse(const nlohmann::json &json);
     void reset();
+
+    static const std::string &actionToString(const Chat::Action &action);
 };
 
 class Media
 {
 public:
-    typedef enum _TYPE_t
+    enum class Type : uint8_t
     {
-        DOCUMENT = 0,
-        PHOTO,
-        ANIMATION,
-        STICKER,
-        STORY,
-        VIDEO,
-        VIDEO_NOTE,
-        VOICE,
-        AUDIO,
-        CONTACT
-    } TYPE_t;
+        DOCUMENT = 0x00,
+        PHOTO = 0x01,
+        ANIMATION = 0x02,
+        STICKER = 0x03,
+        STORY = 0x04,
+        VIDEO = 0x05,
+        VIDEO_NOTE = 0x06,
+        VOICE = 0x07,
+        AUDIO = 0x08,
+        CONTACT = 0x09
+    };
 
-    TYPE_t type;
+    Type type;
     long long fileSize;
     std::string fileId;
     std::string fileUniqueId;
@@ -76,9 +90,12 @@ public:
     Media();
     ~Media();
     bool empty() const;
-    bool parse(TYPE_t type, const nlohmann::json &json);
+    bool parse(Type type, const nlohmann::json &json);
     void reset();
     const std::string getType() const;
+
+    static const std::string &typeToString(const Type &type);
+    static void typeIteration(std::function<void(const Type &, const std::string &)> handler);
 };
 
 class Message
@@ -116,13 +133,5 @@ public:
     bool parse(const nlohmann::json &json);
     void reset();
 };
-
-struct MediaTypeEntry
-{
-    Media::TYPE_t type;
-    const char *key;
-};
-
-extern const struct MediaTypeEntry mediaTypes[10];
 
 #endif

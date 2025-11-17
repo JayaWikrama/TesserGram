@@ -67,7 +67,7 @@ bool Telegram::parseGetUpdatesResponse(const std::string &buffer)
 
 bool Telegram::apiGetMe()
 {
-    Request req(TELEGRAM_BASE_URL, this->token, Request::CONFIG);
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::CONFIG);
     if (req.isSuccess())
     {
         try
@@ -96,7 +96,7 @@ bool Telegram::apiGetUpdates()
     if (this->lastUpdateId > 0)
     {
         std::string data = "{\"offset\":" + std::to_string(this->lastUpdateId + 1) + "}";
-        Request req(TELEGRAM_BASE_URL, this->token, Request::UPDATES, data);
+        Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UPDATES, data);
         if (req.isSuccess())
         {
             return this->__parseGetUpdatesResponse(req.getResponse());
@@ -104,7 +104,7 @@ bool Telegram::apiGetUpdates()
     }
     else
     {
-        Request req(TELEGRAM_BASE_URL, this->token, Request::UPDATES);
+        Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UPDATES);
         if (req.isSuccess())
         {
             return this->__parseGetUpdatesResponse(req.getResponse());
@@ -118,7 +118,7 @@ bool Telegram::apiSendMessage(long long targetId, const std::string &message)
     nlohmann::json json;
     json["chat_id"] = targetId;
     json["text"] = message;
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, json.dump());
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::SEND_MESSAGE, json.dump());
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");
@@ -133,7 +133,7 @@ bool Telegram::apiEditMessageText(long long targetId, long long messageId, const
     json["chat_id"] = targetId;
     json["message_id"] = messageId;
     json["text"] = message;
-    Request req(TELEGRAM_BASE_URL, this->token, Request::EDIT_MESSAGE_TEXT, json.dump());
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::EDIT_MESSAGE_TEXT, json.dump());
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");
@@ -142,10 +142,10 @@ bool Telegram::apiEditMessageText(long long targetId, long long messageId, const
     return false;
 }
 
-bool Telegram::apiSendChatAction(long long targetId, Telegram::ChatAction_t action)
+bool Telegram::apiSendChatAction(long long targetId, Chat::Action action)
 {
-    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"action\":\"" + ChatActionStr[action] + "\"}";
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_CHAT_ACTION, data);
+    std::string data = "{\"chat_id\":" + std::to_string(targetId) + ",\"action\":\"" + Chat::actionToString(action) + "\"}";
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::SEND_CHAT_ACTION, data);
     if (req.isSuccess())
     {
 

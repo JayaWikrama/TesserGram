@@ -7,11 +7,11 @@
 #include "json-validator.hpp"
 #include "nlohmann/json.hpp"
 
-TKeyboard::TKeyButton::TKeyButton(TKeyboard::TKeyButton::TValueType_t type, const std::string &text, const std::string &value) : type(type), text(text), value(value) {}
+TKeyboard::TKeyButton::TKeyButton(TKeyboard::TKeyButton::Type type, const std::string &text, const std::string &value) : type(type), text(text), value(value) {}
 
 TKeyboard::TKeyButton::~TKeyButton() {}
 
-TKeyboard::TKeyButton::TValueType_t TKeyboard::TKeyButton::getType() const
+TKeyboard::TKeyButton::Type TKeyboard::TKeyButton::getType() const
 {
     return this->type;
 }
@@ -26,7 +26,7 @@ const std::string &TKeyboard::TKeyButton::getValue() const
     return this->value;
 }
 
-TKeyboard::TKeyboard(TKeyboard::TKeyType_t type, const std::string &caption)
+TKeyboard::TKeyboard(TKeyboard::Type type, const std::string &caption)
 {
     this->type = type;
     this->caption = caption;
@@ -39,7 +39,7 @@ TKeyboard::~TKeyboard()
 
 bool TKeyboard::addButton(const std::string &button)
 {
-    if (this->type != TKeyboard::KEYBOARD)
+    if (this->type != TKeyboard::Type::KEYBOARD)
         return false;
     try
     {
@@ -56,18 +56,18 @@ bool TKeyboard::addButton(const std::string &button)
     return false;
 }
 
-bool TKeyboard::addButton(TKeyboard::TKeyButton::TValueType_t type, const std::string &text, const std::string &value)
+bool TKeyboard::addButton(TKeyboard::TKeyButton::Type type, const std::string &text, const std::string &value)
 {
-    if (this->type != TKeyboard::INLINE_KEYBOARD)
+    if (this->type != TKeyboard::Type::INLINE_KEYBOARD)
         return false;
-    if (type == TKeyboard::TKeyButton::URL)
+    if (type == TKeyboard::TKeyButton::Type::URL)
     {
         nlohmann::json json;
         json["text"] = text;
         json["url"] = value;
         this->buttons.push_back("[" + json.dump() + "]");
     }
-    else if (type == TKeyboard::TKeyButton::CALLBACK_QUERY)
+    else if (type == TKeyboard::TKeyButton::Type::CALLBACK_QUERY)
     {
         nlohmann::json json;
         json["text"] = text;
@@ -86,7 +86,7 @@ bool TKeyboard::addButton(const TKeyboard::TKeyButton &button)
 
 bool TKeyboard::addButton(const std::vector<TKeyboard::TKeyButton> &buttons)
 {
-    if (this->type != TKeyboard::INLINE_KEYBOARD)
+    if (this->type != TKeyboard::Type::INLINE_KEYBOARD)
         return false;
 
     if (buttons.size() == 0)
@@ -96,13 +96,13 @@ bool TKeyboard::addButton(const std::vector<TKeyboard::TKeyButton> &buttons)
     for (const TKeyboard::TKeyButton &button : buttons)
     {
         nlohmann::json jsonButton;
-        if (button.getType() == TKeyboard::TKeyButton::URL)
+        if (button.getType() == TKeyboard::TKeyButton::Type::URL)
         {
             jsonButton = {
                 {"text", button.getText()},
                 {"url", button.getValue()}};
         }
-        else if (button.getType() == TKeyboard::TKeyButton::CALLBACK_QUERY)
+        else if (button.getType() == TKeyboard::TKeyButton::Type::CALLBACK_QUERY)
         {
             jsonButton = {
                 {"text", button.getText()},
@@ -124,7 +124,7 @@ TKeyboard &TKeyboard::add(const std::string &button)
     return *this;
 }
 
-TKeyboard &TKeyboard::add(TKeyboard::TKeyButton::TValueType_t type, const std::string &text, const std::string &value)
+TKeyboard &TKeyboard::add(TKeyboard::TKeyButton::Type type, const std::string &text, const std::string &value)
 {
     if (!(this->addButton(type, text, value)))
         throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
@@ -169,7 +169,7 @@ std::string TKeyboard::getMarkup() const
     }
 
     nlohmann::json result;
-    if (this->type == TKeyboard::KEYBOARD)
+    if (this->type == TKeyboard::Type::KEYBOARD)
         result["keyboard"] = arr;
     else
         result["inline_keyboard"] = arr;
@@ -191,7 +191,7 @@ bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard)
         {"text", keyboard.getCaption()},
         {"reply_markup", nlohmann::json::parse(replayMarkup)}};
 
-    Request req(TELEGRAM_BASE_URL, this->token, Request::SEND_MESSAGE, json.dump());
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::SEND_MESSAGE, json.dump());
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");
@@ -215,7 +215,7 @@ bool Telegram::apiEditInlineKeyboard(long long targetId, long long messageId, co
         {"text", keyboard.getCaption()},
         {"reply_markup", nlohmann::json::parse(replayMarkup)}};
 
-    Request req(TELEGRAM_BASE_URL, this->token, Request::EDIT_MESSAGE_TEXT, json.dump());
+    Request req(TELEGRAM_BASE_URL, this->token, Request::Type::EDIT_MESSAGE_TEXT, json.dump());
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");

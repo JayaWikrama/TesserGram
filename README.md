@@ -58,7 +58,7 @@ telegram.getUpdates(
             .processMessage(
                 [&](const Message &m)
                 {
-                    t.apiSendChatAction(m.room.id, Telegram::TYPING); // send typing action while create an reply
+                    t.apiSendChatAction(m.room.id, Chat::Action::TYPING); // send typing action while create an reply
                     t.apiSendMessage(m.chat.id, "Hi...");
                 });
     });
@@ -134,7 +134,7 @@ Send reply keyboards for interactive user input using `sendKeyboard`.
 ```c++
 ...
 ...
-TKeyboard keyboard(TKeyboard::KEYBOARD, "Test Keyboard!");
+TKeyboard keyboard(TKeyboard::Type::KEYBOARD, "Test Keyboard!");
 keyboard
     .add("[ \"Key-1\", \"Key-2\" ]")
     .add("[ \"Key-3\" ]")
@@ -154,14 +154,14 @@ Send inline buttons with callbacks or URLs using `sendInlineKeyboard`.
 ```c++
 ...
 ...
-TKeyboard keyboard(TKeyboard::INLINE_KEYBOARD, "Test Keyboard!");
+TKeyboard keyboard(TKeyboard::Type::INLINE_KEYBOARD, "Test Keyboard!");
 
 std::vector<TKeyboard::TKeyButton> buttons;
-buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::CALLBACK_QUERY, "No!", "no"));
-buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::CALLBACK_QUERY, "Yes!", "yes"));
+buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::Type::CALLBACK_QUERY, "No!", "no"));
+buttons.push_back(TKeyboard::TKeyButton(TKeyboard::TKeyButton::Type::CALLBACK_QUERY, "Yes!", "yes"));
 
 keyboard
-    .add(TKeyboard::TKeyButton::URL, "Google", "www.google.com")
+    .add(TKeyboard::TKeyButton::Type::URL, "Google", "www.google.com")
     .add(buttons);
 
 telegram.apiSendKeyboard(<chat_room>, keyboard);

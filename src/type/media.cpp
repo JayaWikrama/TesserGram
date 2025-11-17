@@ -1,23 +1,29 @@
+#include <array>
 #include "type.hpp"
 #include "nlohmann/json.hpp"
 #include "json-validator.hpp"
 #include "utils/include/debug.hpp"
 
-const MediaTypeEntry mediaTypes[10] = {
-    {Media::DOCUMENT, "document"},
-    {Media::PHOTO, "photo"},
-    {Media::ANIMATION, "animation"},
-    {Media::STICKER, "sticker"},
-    {Media::STORY, "story"},
-    {Media::VIDEO, "video"},
-    {Media::VIDEO_NOTE, "video_note"},
-    {Media::VOICE, "voice"},
-    {Media::AUDIO, "audio"},
-    {Media::CONTACT, "contact"}};
+namespace
+{
+    static const std::array<std::string, 10> mediaNames = {
+        "document",
+        "photo",
+        "animation",
+        "sticker",
+        "story",
+        "video",
+        "video_note",
+        "voice",
+        "audio",
+        "contact"};
+
+    static const std::string unknownName = "unknown";
+}
 
 Media::Media()
 {
-    this->type = Media::DOCUMENT;
+    this->type = Media::Type::DOCUMENT;
     this->fileSize = 0;
 }
 
@@ -30,7 +36,7 @@ bool Media::empty() const
     return this->fileId.empty();
 }
 
-bool Media::parse(TYPE_t type, const nlohmann::json &json)
+bool Media::parse(Media::Type type, const nlohmann::json &json)
 {
     try
     {
@@ -61,7 +67,7 @@ bool Media::parse(TYPE_t type, const nlohmann::json &json)
 
 void Media::reset()
 {
-    this->type = Media::DOCUMENT;
+    this->type = Media::Type::DOCUMENT;
     this->fileSize = 0;
     this->fileId.clear();
     this->fileUniqueId.clear();
@@ -70,10 +76,26 @@ void Media::reset()
 
 const std::string Media::getType() const
 {
-    for (const auto &entry : mediaTypes)
+    return this->typeToString(this->type);
+}
+
+const std::string &Media::typeToString(const Media::Type &type)
+{
+    std::size_t index = static_cast<std::size_t>(type);
+
+    if (index < mediaNames.size())
     {
-        if (entry.type == this->type)
-            return std::string(entry.key);
+        return mediaNames[index];
     }
-    return "unknown";
+    return unknownName;
+}
+
+void Media::typeIteration(std::function<void(const Type &, const std::string &)> handler)
+{
+    uint8_t idx = 0;
+    for (const std::string &name : mediaNames)
+    {
+        handler(static_cast<Media::Type>(idx), name);
+        idx++;
+    }
 }

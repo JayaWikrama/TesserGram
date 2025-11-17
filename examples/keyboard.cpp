@@ -17,7 +17,7 @@ int main(int argc, char **argv)
     {
         telegram.info();
 
-        TKeyboard keyboard(TKeyboard::KEYBOARD, "Test Keyboard!");
+        TKeyboard keyboard(TKeyboard::Type::KEYBOARD, "Test Keyboard!");
         keyboard
             .add("[ \"Key-1\", \"Key-2\" ]")
             .add("[ \"Key-3\" ]")

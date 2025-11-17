@@ -67,7 +67,7 @@ FetchAPI::FetchAPI(const std::string &url, unsigned short connectTimeout, unsign
   this->totalTimeout = totalTimeout;
   this->payload = "";
   this->errorMsg = "";
-  this->errorCode = FetchAPI::FETCH_OK;
+  this->code = FetchAPI::ReturnCode::FETCH_OK;
   this->headers.clear();
   this->body = "";
 }
@@ -127,7 +127,7 @@ void FetchAPI::reset()
 {
   this->payload.clear();
   this->errorMsg.clear();
-  this->errorCode = FetchAPI::FETCH_OK;
+  this->code = FetchAPI::ReturnCode::FETCH_OK;
 }
 
 bool FetchAPI::get(const std::map<std::string, std::string> &queryParams)
@@ -137,7 +137,7 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams)
   CURL *curl = curl_easy_init();
   if (!curl)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
     this->debug.log(Debug::ERROR, __func__, "%s\n", this->errorMsg.c_str());
     return false;
@@ -193,28 +193,28 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams)
     switch (res)
     {
     case CURLE_COULDNT_CONNECT:
-      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_CONNECTION;
       break;
     case CURLE_OPERATION_TIMEDOUT:
-      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_TIMEOUT;
       break;
     case CURLE_URL_MALFORMAT:
-      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_INVALID_URL;
       break;
     default:
-      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
       break;
     }
   }
   else if (httpCode >= 400)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
   }
   else
   {
     this->payload = response;
-    this->errorCode = FetchAPI::FETCH_OK;
+    this->code = FetchAPI::ReturnCode::FETCH_OK;
   }
 
   if (chunk)
@@ -222,7 +222,7 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams)
   curl_easy_cleanup(curl);
 
   {
-    if (this->errorCode == FetchAPI::FETCH_OK)
+    if (this->code == FetchAPI::ReturnCode::FETCH_OK)
     {
       this->debug.log(Debug::INFO, __func__, "GET request to %s success\n", fullUrl.str().c_str());
       this->debug.log(Debug::INFO, __func__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
@@ -234,7 +234,7 @@ bool FetchAPI::get(const std::map<std::string, std::string> &queryParams)
     }
   }
 
-  return (this->errorCode == FetchAPI::FETCH_OK);
+  return (this->code == FetchAPI::ReturnCode::FETCH_OK);
 }
 
 bool FetchAPI::post()
@@ -244,7 +244,7 @@ bool FetchAPI::post()
   CURL *curl = curl_easy_init();
   if (!curl)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
     return false;
   }
@@ -282,32 +282,32 @@ bool FetchAPI::post()
     switch (res)
     {
     case CURLE_COULDNT_CONNECT:
-      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_CONNECTION;
       break;
     case CURLE_OPERATION_TIMEDOUT:
-      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_TIMEOUT;
       break;
     case CURLE_URL_MALFORMAT:
-      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_INVALID_URL;
       break;
     default:
-      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
       break;
     }
   }
   else if (httpCode >= 400)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
   }
   else
   {
     this->payload = response;
-    this->errorCode = FetchAPI::FETCH_OK;
+    this->code = FetchAPI::ReturnCode::FETCH_OK;
   }
 
   {
-    if (this->errorCode == FetchAPI::FETCH_OK)
+    if (this->code == FetchAPI::ReturnCode::FETCH_OK)
     {
       this->debug.log(Debug::INFO, __func__, "POST request to %s success\n", this->url.c_str());
       this->debug.log(Debug::INFO, __func__, "Response: %s\n", response.length() > 0 ? ("\n" + response).c_str() : "none");
@@ -323,7 +323,7 @@ bool FetchAPI::post()
     curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
 
-  return (this->errorCode == FetchAPI::FETCH_OK);
+  return (this->code == FetchAPI::ReturnCode::FETCH_OK);
 }
 
 bool FetchAPI::sendFile()
@@ -332,7 +332,7 @@ bool FetchAPI::sendFile()
   reset();
   if (body.length() == 0)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
     this->errorMsg = "body empty";
     return false;
   }
@@ -349,7 +349,7 @@ bool FetchAPI::sendFile()
   catch (const std::exception &e)
   {
     this->debug.log(Debug::ERROR, __func__, "mime parse failed: %s!\n", e.what());
-    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
     this->errorMsg = "invalid json format";
     return false;
   }
@@ -358,7 +358,7 @@ bool FetchAPI::sendFile()
   CURL *curl = curl_easy_init();
   if (!curl)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
     return false;
   }
@@ -419,32 +419,32 @@ bool FetchAPI::sendFile()
     switch (res)
     {
     case CURLE_COULDNT_CONNECT:
-      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_CONNECTION;
       break;
     case CURLE_OPERATION_TIMEDOUT:
-      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_TIMEOUT;
       break;
     case CURLE_URL_MALFORMAT:
-      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_INVALID_URL;
       break;
     default:
-      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
       break;
     }
   }
   else if (httpCode >= 400)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
   }
   else
   {
     this->payload = response;
-    this->errorCode = FetchAPI::FETCH_OK;
+    this->code = FetchAPI::ReturnCode::FETCH_OK;
   }
 
   {
-    if (this->errorCode == FetchAPI::FETCH_OK)
+    if (this->code == FetchAPI::ReturnCode::FETCH_OK)
     {
       this->debug.log(Debug::INFO, __func__, "POST request to %s success\n", this->url.c_str());
     }
@@ -459,7 +459,7 @@ bool FetchAPI::sendFile()
     curl_slist_free_all(chunk);
   curl_easy_cleanup(curl);
 
-  return (this->errorCode == FetchAPI::FETCH_OK);
+  return (this->code == FetchAPI::ReturnCode::FETCH_OK);
 }
 
 bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params)
@@ -470,7 +470,7 @@ bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::st
   CURL *curl = curl_easy_init();
   if (!curl)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
     this->errorMsg = "Failed to initialize CURL";
     this->debug.log(Debug::ERROR, __func__, "%s\n", this->errorMsg.c_str());
     return false;
@@ -525,28 +525,28 @@ bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::st
     switch (res)
     {
     case CURLE_COULDNT_CONNECT:
-      this->errorCode = FetchAPI::FETCH_ERR_CONNECTION;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_CONNECTION;
       break;
     case CURLE_OPERATION_TIMEDOUT:
-      this->errorCode = FetchAPI::FETCH_ERR_TIMEOUT;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_TIMEOUT;
       break;
     case CURLE_URL_MALFORMAT:
-      this->errorCode = FetchAPI::FETCH_ERR_INVALID_URL;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_INVALID_URL;
       break;
     default:
-      this->errorCode = FetchAPI::FETCH_ERR_UNKNOWN;
+      this->code = FetchAPI::ReturnCode::FETCH_ERR_UNKNOWN;
       break;
     }
   }
   else if (httpCode >= 400)
   {
-    this->errorCode = FetchAPI::FETCH_ERR_HTTP_ERROR;
+    this->code = FetchAPI::ReturnCode::FETCH_ERR_HTTP_ERROR;
     this->errorMsg = "HTTP error code: " + std::to_string(httpCode);
   }
   else
   {
     this->payload = "";
-    this->errorCode = FetchAPI::FETCH_OK;
+    this->code = FetchAPI::ReturnCode::FETCH_OK;
   }
 
   if (chunk)
@@ -554,7 +554,7 @@ bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::st
   curl_easy_cleanup(curl);
 
   {
-    if (this->errorCode == FetchAPI::FETCH_OK)
+    if (this->code == FetchAPI::ReturnCode::FETCH_OK)
     {
       this->debug.log(Debug::INFO, __func__, "GET request (download) to %s success\n", fullUrl.str().c_str());
       this->debug.log(Debug::INFO, __func__, "Download size: %lu\n", data.size());
@@ -565,7 +565,7 @@ bool FetchAPI::download(std::vector<unsigned char> &data, const std::map<std::st
     }
   }
 
-  return (this->errorCode == FetchAPI::FETCH_OK);
+  return (this->code == FetchAPI::ReturnCode::FETCH_OK);
 }
 
 std::string FetchAPI::getPayload()
@@ -584,10 +584,10 @@ std::string FetchAPI::getError()
   return result;
 }
 
-FetchAPI::FetchErrorCode_t FetchAPI::getErrorCode()
+FetchAPI::ReturnCode FetchAPI::getErrorCode()
 {
-  FetchAPI::FetchErrorCode_t result;
+  FetchAPI::ReturnCode result;
   std::lock_guard<std::mutex> guard(this->mutex);
-  result = this->errorCode;
+  result = this->code;
   return result;
 }
