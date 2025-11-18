@@ -26,7 +26,7 @@ const std::string &TKeyboard::TKeyButton::getValue() const
     return this->value;
 }
 
-TKeyboard::TKeyboard(TKeyboard::Type type, const std::string &caption)
+TKeyboard::TKeyboard(TKeyboard::Type type, const std::string &caption) : commonButtons(), inlineButtons()
 {
     this->type = type;
     this->caption = caption;
@@ -41,47 +41,44 @@ bool TKeyboard::addButton(const std::string &button)
 {
     if (this->type != TKeyboard::Type::KEYBOARD)
         return false;
-    try
-    {
-        nlohmann::json json = nlohmann::json::parse(button);
-        if (json.is_array() == false)
-            throw std::runtime_error(Error::fieldTypeInvalid(__FILE__, __LINE__, __func__, "array", "json"));
-        this->buttons.push_back(button);
-        return true;
-    }
-    catch (const std::exception &e)
-    {
-        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "parse failed: %s!\n", e.what());
-    }
-    return false;
+
+    this->commonButtons.emplace_back();
+    this->commonButtons.back().push_back(button);
+
+    return true;
+}
+
+bool TKeyboard::addButton(const std::vector<std::string> &buttons)
+{
+    if (this->type != TKeyboard::Type::KEYBOARD)
+        return false;
+
+    if (buttons.empty())
+        return false;
+
+    this->commonButtons.push_back(buttons);
+
+    return true;
 }
 
 bool TKeyboard::addButton(TKeyboard::TKeyButton::Type type, const std::string &text, const std::string &value)
 {
     if (this->type != TKeyboard::Type::INLINE_KEYBOARD)
         return false;
-    if (type == TKeyboard::TKeyButton::Type::URL)
-    {
-        nlohmann::json json;
-        json["text"] = text;
-        json["url"] = value;
-        this->buttons.push_back("[" + json.dump() + "]");
-    }
-    else if (type == TKeyboard::TKeyButton::Type::CALLBACK_QUERY)
-    {
-        nlohmann::json json;
-        json["text"] = text;
-        json["callback_data"] = value;
-        this->buttons.push_back("[" + json.dump() + "]");
-    }
-    else
-        return false;
+
+    this->inlineButtons.emplace_back();
+    this->inlineButtons.back().emplace_back(type, text, value);
     return true;
 }
 
 bool TKeyboard::addButton(const TKeyboard::TKeyButton &button)
 {
-    return addButton(button.getType(), button.getText(), button.getValue());
+    if (this->type != TKeyboard::Type::INLINE_KEYBOARD)
+        return false;
+
+    this->inlineButtons.emplace_back();
+    this->inlineButtons.back().push_back(button);
+    return true;
 }
 
 bool TKeyboard::addButton(const std::vector<TKeyboard::TKeyButton> &buttons)
@@ -89,37 +86,24 @@ bool TKeyboard::addButton(const std::vector<TKeyboard::TKeyButton> &buttons)
     if (this->type != TKeyboard::Type::INLINE_KEYBOARD)
         return false;
 
-    if (buttons.size() == 0)
+    if (buttons.empty())
         return false;
 
-    nlohmann::json arr = nlohmann::json::array();
-    for (const TKeyboard::TKeyButton &button : buttons)
-    {
-        nlohmann::json jsonButton;
-        if (button.getType() == TKeyboard::TKeyButton::Type::URL)
-        {
-            jsonButton = {
-                {"text", button.getText()},
-                {"url", button.getValue()}};
-        }
-        else if (button.getType() == TKeyboard::TKeyButton::Type::CALLBACK_QUERY)
-        {
-            jsonButton = {
-                {"text", button.getText()},
-                {"callback_data", button.getValue()}};
-        }
-        else
-            return false;
-        arr.push_back(jsonButton);
-    }
+    this->inlineButtons.push_back(buttons);
 
-    this->buttons.push_back(arr.dump());
     return true;
 }
 
 TKeyboard &TKeyboard::add(const std::string &button)
 {
     if (!(this->addButton(button)))
+        throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
+    return *this;
+}
+
+TKeyboard &TKeyboard::add(const std::vector<std::string> &buttons)
+{
+    if (!(this->addButton(buttons)))
         throw std::runtime_error(Error::common(__FILE__, __LINE__, __func__, "invalid input"));
     return *this;
 }
@@ -150,37 +134,54 @@ const std::string &TKeyboard::getCaption() const
     return this->caption;
 }
 
-std::string TKeyboard::getMarkup() const
+const std::vector<std::vector<std::string>> &TKeyboard::getCommonButton() const
 {
-    nlohmann::json arr = nlohmann::json::array();
+    return this->commonButtons;
+}
 
-    try
-    {
-        for (const std::string &button : this->buttons)
-        {
-            nlohmann::json jsonButton = nlohmann::json::parse(button);
-            arr.push_back(jsonButton);
-        }
-    }
-    catch (const std::exception &e)
-    {
-        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "parse button failed\n");
-        return "";
-    }
-
-    nlohmann::json result;
-    if (this->type == TKeyboard::Type::KEYBOARD)
-        result["keyboard"] = arr;
-    else
-        result["inline_keyboard"] = arr;
-
-    return result.dump();
+const std::vector<std::vector<TKeyboard::TKeyButton>> &TKeyboard::getInlineButton() const
+{
+    return this->inlineButtons;
 }
 
 bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard)
 {
-    std::string replayMarkup = keyboard.getMarkup();
-    if (replayMarkup.empty())
+    std::vector<std::vector<std::string>> commonButtons = keyboard.getCommonButton();
+    std::vector<std::vector<TKeyboard::TKeyButton>> inlineButtons = keyboard.getInlineButton();
+
+    nlohmann::json jsonButton = nlohmann::json::array();
+    nlohmann::json jsonKeyboard;
+
+    if (commonButtons.empty() == false)
+    {
+        for (const std::vector<std::string> &row : commonButtons)
+        {
+            nlohmann::json arr = nlohmann::json::array();
+            for (const std::string &button : row)
+            {
+                arr.push_back(button);
+            }
+            jsonButton.push_back(arr);
+        }
+        jsonKeyboard["keyboard"] = jsonButton;
+    }
+    else if (inlineButtons.empty() == false)
+    {
+        for (const std::vector<TKeyboard::TKeyButton> &row : inlineButtons)
+        {
+            nlohmann::json arr = nlohmann::json::array();
+            for (const TKeyboard::TKeyButton &button : row)
+            {
+                nlohmann::json j = {
+                    {"text", button.getText()},
+                    {(button.getType() == TKeyboard::TKeyButton::Type::URL ? "url" : "callback_data"), button.getValue()}};
+                arr.push_back(j);
+            }
+            jsonButton.push_back(arr);
+        }
+        jsonKeyboard["inline_keyboard"] = jsonButton;
+    }
+    else
     {
         Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "invalid keyboard!\n");
         return false;
@@ -189,7 +190,7 @@ bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard)
     nlohmann::json json = {
         {"chat_id", targetId},
         {"text", keyboard.getCaption()},
-        {"reply_markup", nlohmann::json::parse(replayMarkup)}};
+        {"reply_markup", jsonKeyboard}};
 
     Request req(TELEGRAM_BASE_URL, this->token, Request::Type::SEND_MESSAGE, json.dump());
     if (req.isSuccess())
@@ -202,18 +203,37 @@ bool Telegram::apiSendKeyboard(long long targetId, const TKeyboard &keyboard)
 
 bool Telegram::apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard)
 {
-    std::string replayMarkup = keyboard.getMarkup();
-    if (replayMarkup.empty())
+    std::vector<std::vector<TKeyboard::TKeyButton>> buttons = keyboard.getInlineButton();
+
+    if (buttons.empty())
     {
         Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "invalid keyboard!\n");
         return false;
     }
 
+    nlohmann::json jsonButton = nlohmann::json::array();
+
+    for (const std::vector<TKeyboard::TKeyButton> &row : buttons)
+    {
+        nlohmann::json arr = nlohmann::json::array();
+        for (const TKeyboard::TKeyButton &button : row)
+        {
+            nlohmann::json j = {
+                {"text", button.getText()},
+                {(button.getType() == TKeyboard::TKeyButton::Type::URL ? "url" : "callback_data"), button.getValue()}};
+            arr.push_back(j);
+        }
+        jsonButton.push_back(arr);
+    }
+
+    nlohmann::json jsonKeyboard = {
+        {"keyboard", jsonButton}};
+
     nlohmann::json json = {
         {"chat_id", targetId},
         {"message_id", messageId},
         {"text", keyboard.getCaption()},
-        {"reply_markup", nlohmann::json::parse(replayMarkup)}};
+        {"reply_markup", jsonKeyboard}};
 
     Request req(TELEGRAM_BASE_URL, this->token, Request::Type::EDIT_MESSAGE_TEXT, json.dump());
     if (req.isSuccess())

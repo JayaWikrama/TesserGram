@@ -37,7 +37,7 @@ bool Telegram::__parseGetUpdatesResponse(const std::string &buffer)
                 {
                     this->messages.emplace_back();
                     updateId = jvalidator.get<long long>(el, "update_id");
-                    this->messages.back().parse(el.dump());
+                    this->messages.back().parse(el);
                     if (this->lastUpdateId < updateId)
                         this->lastUpdateId = updateId;
                 }

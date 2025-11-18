@@ -5,7 +5,7 @@
 
 NodeMessage::NodeMessage() : callbackQuery(), message(), updateId(0) {}
 
-NodeMessage::NodeMessage(const std::string &message)
+NodeMessage::NodeMessage(const nlohmann::json &message)
 {
     this->parse(message);
 }
@@ -14,28 +14,27 @@ NodeMessage::~NodeMessage()
 {
 }
 
-void NodeMessage::parse(const std::string &message)
+void NodeMessage::parse(const nlohmann::json &message)
 {
-    nlohmann::json json = nlohmann::json::parse(message);
     JSONValidator jvalidator(__FILE__, __LINE__, __func__);
 
-    this->updateId = jvalidator.get<long long>(json, "update_id");
+    this->updateId = jvalidator.get<long long>(message, "update_id");
 
-    if (json.contains("callback_query"))
+    if (message.contains("callback_query"))
     {
-        const nlohmann::json &jsonCallbackQuery = jvalidator.getObject(json, "callback_query");
+        const nlohmann::json &jsonCallbackQuery = jvalidator.getObject(message, "callback_query");
         this->callbackQuery.parse(jsonCallbackQuery);
     }
 
-    else if (json.contains("message"))
+    else if (message.contains("message"))
     {
-        const nlohmann::json &jsonMessage = jvalidator.getObject(json, "message");
+        const nlohmann::json &jsonMessage = jvalidator.getObject(message, "message");
         this->message.parse(jsonMessage);
     }
 
     if (this->message.empty() && this->callbackQuery.empty())
     {
-        throw std::runtime_error("Unknown type: " + message + "!");
+        throw std::runtime_error("Unknown type: " + message.dump() + "!");
     }
 }
 

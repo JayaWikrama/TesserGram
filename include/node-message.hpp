@@ -3,6 +3,7 @@
 
 #include <functional>
 #include "type.hpp"
+#include "nlohmann/json_fwd.hpp"
 
 class NodeMessage
 {
@@ -13,10 +14,10 @@ private:
 
 public:
     NodeMessage();
-    NodeMessage(const std::string &message);
+    NodeMessage(const nlohmann::json &message);
     ~NodeMessage();
 
-    void parse(const std::string &message);
+    void parse(const nlohmann::json &message);
     void display() const;
 
     long long getId() const;

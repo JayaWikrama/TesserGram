@@ -39,19 +39,23 @@ public:
     ~TKeyboard();
 
     TKeyboard &add(const std::string &button);
+    TKeyboard &add(const std::vector<std::string> &buttons);
     TKeyboard &add(TKeyButton::Type type, const std::string &text, const std::string &value);
     TKeyboard &add(const TKeyButton &button);
     TKeyboard &add(const std::vector<TKeyButton> &buttons);
 
     const std::string &getCaption() const;
-    std::string getMarkup() const;
+    const std::vector<std::vector<std::string>> &getCommonButton() const;
+    const std::vector<std::vector<TKeyButton>> &getInlineButton() const;
 
 private:
     Type type;
     std::string caption;
-    std::vector<std::string> buttons;
+    std::vector<std::vector<std::string>> commonButtons;
+    std::vector<std::vector<TKeyButton>> inlineButtons;
 
     bool addButton(const std::string &button);
+    bool addButton(const std::vector<std::string> &buttons);
     bool addButton(TKeyButton::Type type, const std::string &text, const std::string &value);
     bool addButton(const TKeyButton &button);
     bool addButton(const std::vector<TKeyButton> &buttons);

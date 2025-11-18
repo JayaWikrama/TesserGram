@@ -135,10 +135,16 @@ Send reply keyboards for interactive user input using `sendKeyboard`.
 ...
 ...
 TKeyboard keyboard(TKeyboard::Type::KEYBOARD, "Test Keyboard!");
+
+std::vector<std::string> buttons;
+buttons.push_back("Key-1");
+buttons.push_back("Key-2");
+
 keyboard
-    .add("[ \"Key-1\", \"Key-2\" ]")
-    .add("[ \"Key-3\" ]")
-    .add("[ \"Key-4\" ]");
+    .add(buttons)
+    .add("Key-3")
+    .add("Key-4");
+
 telegram.apiSendKeyboard(<chat_room>, keyboard);
 ...
 ...
