@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <functional>
 #include "nlohmann/json_fwd.hpp"
 #include "utils/include/debug.hpp"
 
@@ -22,7 +23,11 @@ public:
     FETCH_ERR_HTTP_ERROR = 0x06,
     FETCH_ERR_PARSE_RESPONSE = 0x07,
     FETCH_ERR_UNSUPPORTED_PROTOCOL = 0x08,
-    FETCH_ERR_UNKNOWN = 0x09
+    FETCH_ERR_INIT_ERROR = 0x09,
+    FETCH_ERR_EMPTY_BODY = 0x0A,
+    FETCH_HAS_NOT_BEEN_DONE = 0x0B,
+    FETCH_ERR_PARSE_MIME = 0x0C,
+    FETCH_ERR_UNKNOWN = 0x0D
   };
 
 private:
@@ -33,7 +38,6 @@ private:
   std::string errorMsg;
   ReturnCode code;
   std::map<std::string, std::string> headers;
-  std::string body;
   mutable std::mutex mutex;
 
   Debug debug;
@@ -65,16 +69,19 @@ public:
   FetchAPI(const std::string &url, unsigned short connectTimeout = 3, unsigned short totalTimeout = 5);
   ~FetchAPI();
 
-  void setHiddenConfidential(const std::string &confidential);
-  void setHiddenConfidential(const std::vector<std::string> &confidential);
+  FetchAPI &confidential(const std::string &confidential);
+  FetchAPI &confidential(const std::vector<std::string> &confidential);
 
-  void insertHeader(const std::string &key, const std::string &value);
-  void setBody(const std::string &data);
+  FetchAPI &header(const std::string &key, const std::string &value);
 
-  bool get(const std::map<std::string, std::string> &params = {});
-  bool post();
-  bool sendFile();
-  bool download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params = {});
+  FetchAPI &get(const std::map<std::string, std::string> &params = {});
+  FetchAPI &post(const std::string &body);
+  FetchAPI &upload(const std::string &mime);
+  FetchAPI &download(std::vector<unsigned char> &data, const std::map<std::string, std::string> &params = {});
+
+  FetchAPI &onSuccess(std::function<void(const std::string &)> handler);
+  FetchAPI &onTimeout(std::function<void()> handler);
+  FetchAPI &onError(std::function<void(ReturnCode, const std::string &)> handler);
 
   std::string getPayload();
   std::string getError();

@@ -41,25 +41,31 @@ private:
 
     std::string getReplay(const std::string &message)
     {
+        std::string result = "Mohon maaf, saya lagi tidak bisa menjawab pertanyaan. Server lagi down.";
         std::string url = "http://localhost:8000/api/v1/ask";
-        FetchAPI api(url, 900, 300);
-        api.insertHeader("Content-Type", "application/json");
-        api.setBody("{\"question\":\"" + message + "\"}");
-        bool success = api.post();
-        if (success)
-        {
-            try
-            {
-                nlohmann::json json = nlohmann::json::parse(api.getPayload());
-                JSONValidator jvalidator(__FILE__, __LINE__, __func__);
-                return jvalidator.get<std::string>(json, "answer");
-            }
-            catch (const std::exception &e)
-            {
-                Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "parse answer failed: %e\n", e.what());
-            }
-        }
-        return "Mohon maaf, saya lagi tidak bisa menjawab pertanyaan. Server lagi down.";
+        FetchAPI fapi(url, 900, 300);
+        fapi.header("Content-Type", "application/json")
+            .post("{\"question\":\"" + message + "\"}")
+            .onSuccess(
+                [&](const std::string &payload)
+                {
+                    try
+                    {
+                        nlohmann::json json = nlohmann::json::parse(payload);
+                        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+                        result = jvalidator.get<std::string>(json, "answer");
+                    }
+                    catch (const std::exception &e)
+                    {
+                        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "parse answer failed: %e\n", e.what());
+                    }
+                })
+            .onError(
+                [](FetchAPI::ReturnCode code, const std::string &err)
+                {
+                    Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "failed to fetch api: %s\n", err.c_str());
+                });
+        return result;
     }
 
     void handler(Telegram &telegram, const NodeMessage &message)
