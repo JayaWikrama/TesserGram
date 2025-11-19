@@ -4,6 +4,7 @@
 #include "nlohmann/json.hpp"
 #include "utils/include/error.hpp"
 
+#include <functional>
 #include <type_traits>
 
 template <typename T>
@@ -72,9 +73,20 @@ struct JsonTypeTrait<double>
 class JSONValidator
 {
 private:
+    enum class ReturnCode : uint8_t
+    {
+        OK = 0x00,
+        NOT_FOUND = 0x01,
+        TYPE_INVALID = 0x02,
+        NOT_SET = 0x03
+    };
+
+    ReturnCode code;
     int line;
     std::string src;
     std::string func;
+    std::string err;
+    nlohmann::json jval;
 
     const char *getTypeString(nlohmann::json::value_t expectedType)
     {
@@ -117,7 +129,12 @@ private:
     }
 
 public:
-    JSONValidator(const std::string &src, int line, const std::string &func) : src(src), line(line), func(func)
+    JSONValidator(const std::string &src, int line, const std::string &func) : code(ReturnCode::NOT_SET),
+                                                                               src(src),
+                                                                               line(line),
+                                                                               func(func),
+                                                                               err(),
+                                                                               jval()
     {
     }
 
@@ -158,6 +175,51 @@ public:
         const nlohmann::json &j = this->_validate(json, key, JsonTypeTrait<T>::type, parrentKey);
         T value = j.get<T>();
         return value;
+    }
+
+    template <typename T>
+    JSONValidator &validate(const nlohmann::json &json,
+                            const std::string &key,
+                            const std::string &parrentKey = "")
+    {
+        auto it = json.find(key);
+        if (it == json.end())
+        {
+            this->err = Error::fieldNotFound(this->src, this->line, this->func, key, parrentKey);
+            this->code = ReturnCode::NOT_FOUND;
+            this->jval = json;
+            return *this;
+        }
+        this->jval = *it;
+        if (it->type() != JsonTypeTrait<T>::type)
+        {
+            this->err = Error::fieldTypeInvalid(this->src, this->line, this->func, this->getTypeString(JsonTypeTrait<T>::type), key, parrentKey);
+            this->code = ReturnCode::TYPE_INVALID;
+            return *this;
+        }
+        this->code = ReturnCode::OK;
+        return *this;
+    }
+
+    JSONValidator &onValid(std::function<void(const nlohmann::json &)> handler)
+    {
+        if (this->code == ReturnCode::OK)
+            handler(this->jval);
+        return *this;
+    }
+
+    JSONValidator &onNotFound(std::function<void(const nlohmann::json &, const std::string &err)> handler)
+    {
+        if (this->code == ReturnCode::NOT_FOUND)
+            handler(this->jval, err);
+        return *this;
+    }
+
+    JSONValidator &onTypeInvalid(std::function<void(const nlohmann::json &, const std::string &err)> handler)
+    {
+        if (this->code == ReturnCode::TYPE_INVALID)
+            handler(this->jval, err);
+        return *this;
     }
 };
 
