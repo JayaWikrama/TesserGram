@@ -42,6 +42,7 @@ endif()
 
 # Specify the source files
 set(SOURCE_FILES
+  src/json-validator.cpp
   src/fetch-api.cpp
   src/request.cpp
   src/polling-controller.cpp
