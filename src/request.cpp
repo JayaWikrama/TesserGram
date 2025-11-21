@@ -105,10 +105,10 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
                     try
                     {
                         nlohmann::json json = nlohmann::json::parse(payload);
-                        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+                        JSONValidator jval(__FILE__, __LINE__, __func__);
 
-                        nlohmann::json jsonResult = jvalidator.getObject(json, "result");
-                        mediaPath = jvalidator.get<std::string>(jsonResult, "file_path", "result");
+                        nlohmann::json jsonResult = jval.getObject(json, "result");
+                        mediaPath = jval.get<std::string>(jsonResult, "file_path", "result");
 
                         this->response = mediaPath;
                         req = Request::Type::DOWNLOAD_MEDIA_BY_PATH;

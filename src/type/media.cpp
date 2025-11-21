@@ -40,20 +40,31 @@ bool Media::parse(Media::Type type, const nlohmann::json &json)
 {
     try
     {
-        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+        JSONValidator jval(__FILE__, __LINE__, __func__);
 
         this->type = type;
 
-        if (json.contains("file_size"))
-            this->fileSize = jvalidator.get<long long>(json, "file_size");
-        else
-            this->fileSize = 0;
+        jval.validate<std::string>(json, "file_size")
+            .onValid(
+                [this](const nlohmann::json &jsonFZ)
+                {
+                    this->fileSize = jsonFZ.get<long long>();
+                })
+            .onInvalid(
+                [this]()
+                {
+                    this->fileSize = 0;
+                });
 
-        this->fileId = jvalidator.get<std::string>(json, "file_id");
-        this->fileUniqueId = jvalidator.get<std::string>(json, "file_unique_id");
+        this->fileId = jval.get<std::string>(json, "file_id");
+        this->fileUniqueId = jval.get<std::string>(json, "file_unique_id");
 
-        if (json.contains("file_name"))
-            this->fileName = jvalidator.get<std::string>(json, "file_name");
+        jval.validate<std::string>(json, "file_name")
+            .onValid(
+                [this](const nlohmann::json &jsonFName)
+                {
+                    this->fileName = jsonFName.get<long long>();
+                });
 
         return true;
     }

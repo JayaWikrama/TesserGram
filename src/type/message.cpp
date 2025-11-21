@@ -24,49 +24,80 @@ bool Message::parse(const nlohmann::json &json)
 {
     try
     {
-        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+        JSONValidator jval(__FILE__, __LINE__, __func__);
 
-        if (json.contains("date"))
-            this->dtime = jvalidator.get<long>(json, "date");
-        else
-            this->dtime = 0;
+        jval.validate<std::string>(json, "date")
+            .onValid(
+                [this](const nlohmann::json &jsonDate)
+                {
+                    this->dtime = jsonDate.get<long>();
+                })
+            .onInvalid(
+                [this]()
+                {
+                    this->dtime = 0;
+                });
 
-        this->id = jvalidator.get<long long>(json, "message_id");
+        this->id = jval.get<long long>(json, "message_id");
 
-        if (json.contains("message_thread_id"))
-            this->threadId = jvalidator.get<long long>(json, "message_thread_id");
-        else
-            this->threadId = 0;
+        jval.validate<std::string>(json, "message_thread_id")
+            .onValid(
+                [this](const nlohmann::json &jsonMTId)
+                {
+                    this->threadId = jsonMTId.get<long long>();
+                })
+            .onInvalid(
+                [this]()
+                {
+                    this->threadId = 0;
+                });
 
-        if (json.contains("text"))
-            this->text = jvalidator.get<std::string>(json, "text");
-        if (json.contains("caption"))
-            this->caption = jvalidator.get<std::string>(json, "caption");
+        jval.validate<std::string>(json, "text")
+            .onValid(
+                [this](const nlohmann::json &jsonText)
+                {
+                    this->text = jsonText.get<std::string>();
+                })
+            .onInvalid(
+                [this]()
+                {
+                    this->text.clear();
+                });
 
-        const nlohmann::json &jsonFrom = jvalidator.getObject(json, "from");
-        const nlohmann::json &jsonChat = jvalidator.getObject(json, "chat");
+        jval.validate<std::string>(json, "caption")
+            .onValid(
+                [this](const nlohmann::json &jsonCaption)
+                {
+                    this->caption = jsonCaption.get<std::string>();
+                })
+            .onInvalid(
+                [this]()
+                {
+                    this->caption.clear();
+                });
+        const nlohmann::json &jsonFrom = jval.getObject(json, "from");
+        const nlohmann::json &jsonChat = jval.getObject(json, "chat");
         this->from.parse(jsonFrom);
         this->chat.parse(jsonChat);
 
-        if (json.contains("reply_to_message"))
-        {
-            try
-            {
-                const nlohmann::json &jsonReplyToMessage = jvalidator.getObject(json, "reply_to_message");
-                this->replyToMessage.reset(new Message());
-                if (this->replyToMessage.get() != nullptr)
+        jval.validate<std::string>(json, "reply_to_message")
+            .onValid(
+                [this](const nlohmann::json &jsonReplyToMessage)
                 {
-                    if (this->replyToMessage->parse(jsonReplyToMessage) == false)
+                    this->replyToMessage.reset(new Message());
+                    if (this->replyToMessage.get() != nullptr)
                     {
-                        this->replyToMessage.reset();
+                        if (this->replyToMessage->parse(jsonReplyToMessage) == false)
+                        {
+                            this->replyToMessage.reset();
+                        }
                     }
-                }
-            }
-            catch (const std::exception &e)
-            {
-                Debug::log(Debug::WARNING, __FILE__, __LINE__, __func__, "parse \"reply to message\" failed: %s!\n", e.what());
-            }
-        }
+                })
+            .onInvalid(
+                [this]()
+                {
+                    this->replyToMessage.reset();
+                });
 
         Media::typeIteration(
             [&](const Media::Type &type, const std::string &name)

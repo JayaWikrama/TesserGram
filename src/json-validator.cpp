@@ -189,6 +189,64 @@ JSONValidator &JSONValidator::validate(const nlohmann::json &json,
     return *this;
 }
 
+JSONValidator &JSONValidator::object(const nlohmann::json &json,
+                                     const std::string &key,
+                                     const std::string &parrentKey)
+{
+    auto it = json.find(key);
+    if (it == json.end())
+    {
+        this->err = Error::fieldNotFound(this->src, this->line, this->func, key, parrentKey);
+        this->code = ReturnCode::NOT_FOUND;
+        this->jval = &json;
+        return *this;
+    }
+    this->jval = &(*it);
+    if (it->type() != nlohmann::json::value_t::object)
+    {
+        this->err = Error::fieldTypeInvalid(this->src, this->line, this->func, "object", key, parrentKey);
+        this->code = ReturnCode::TYPE_INVALID;
+        return *this;
+    }
+    if (it->empty())
+    {
+        Error::common(src, line, func, key + " empty");
+        this->code = ReturnCode::EMPTY;
+        return *this;
+    }
+    this->code = ReturnCode::OK;
+    return *this;
+}
+
+JSONValidator &JSONValidator::array(const nlohmann::json &json,
+                                    const std::string &key,
+                                    const std::string &parrentKey)
+{
+    auto it = json.find(key);
+    if (it == json.end())
+    {
+        this->err = Error::fieldNotFound(this->src, this->line, this->func, key, parrentKey);
+        this->code = ReturnCode::NOT_FOUND;
+        this->jval = &json;
+        return *this;
+    }
+    this->jval = &(*it);
+    if (it->type() != nlohmann::json::value_t::array)
+    {
+        this->err = Error::fieldTypeInvalid(this->src, this->line, this->func, "array", key, parrentKey);
+        this->code = ReturnCode::TYPE_INVALID;
+        return *this;
+    }
+    if (it->empty())
+    {
+        Error::common(src, line, func, key + " empty");
+        this->code = ReturnCode::EMPTY;
+        return *this;
+    }
+    this->code = ReturnCode::OK;
+    return *this;
+}
+
 JSONValidator &JSONValidator::onValid(std::function<void(const nlohmann::json &)> handler)
 {
     if (this->code == ReturnCode::OK)
@@ -207,6 +265,27 @@ JSONValidator &JSONValidator::onTypeInvalid(std::function<void(const nlohmann::j
 {
     if (this->code == ReturnCode::TYPE_INVALID)
         handler(*(this->jval), err);
+    return *this;
+}
+
+JSONValidator &JSONValidator::onInvalid(std::function<void(const nlohmann::json &, const std::string &err)> handler)
+{
+    if (this->code != ReturnCode::OK)
+        handler(*(this->jval), err);
+    return *this;
+}
+
+JSONValidator &JSONValidator::onInvalid(std::function<void(const std::string &err)> handler)
+{
+    if (this->code != ReturnCode::OK)
+        handler(err);
+    return *this;
+}
+
+JSONValidator &JSONValidator::onInvalid(std::function<void()> handler)
+{
+    if (this->code != ReturnCode::OK)
+        handler();
     return *this;
 }
 

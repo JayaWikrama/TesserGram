@@ -22,15 +22,27 @@ bool User::parse(const nlohmann::json &json)
 {
     try
     {
-        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
-        this->isBot = jvalidator.get<bool>(json, "is_bot");
-        this->id = jvalidator.get<long long>(json, "id");
-        this->firstName = jvalidator.get<std::string>(json, "first_name");
-        if (json.contains("last_name"))
-            this->lastName = jvalidator.get<std::string>(json, "last_name");
-        this->username = jvalidator.get<std::string>(json, "username");
-        if (json.contains("language_code"))
-            this->languageCode = jvalidator.get<std::string>(json, "language_code");
+        JSONValidator jval(__FILE__, __LINE__, __func__);
+        this->isBot = jval.get<bool>(json, "is_bot");
+        this->id = jval.get<long long>(json, "id");
+        this->firstName = jval.get<std::string>(json, "first_name");
+
+        jval.validate<std::string>(json, "last_name")
+            .onValid(
+                [&](const nlohmann::json &jsonLastName)
+                {
+                    this->lastName = jsonLastName.get<std::string>();
+                });
+
+        this->username = jval.get<std::string>(json, "username");
+
+        jval.validate<std::string>(json, "language_code")
+            .onValid(
+                [&](const nlohmann::json &jsonLangCode)
+                {
+                    this->languageCode = jsonLangCode.get<std::string>();
+                });
+
         return true;
     }
     catch (const std::exception &e)

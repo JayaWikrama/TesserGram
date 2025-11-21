@@ -13,7 +13,8 @@ private:
         OK = 0x00,
         NOT_FOUND = 0x01,
         TYPE_INVALID = 0x02,
-        NOT_SET = 0x03
+        NOT_SET = 0x03,
+        EMPTY = 0x04
     };
 
     ReturnCode code;
@@ -49,9 +50,18 @@ public:
     JSONValidator &validate(const nlohmann::json &json,
                             const std::string &key,
                             const std::string &parrentKey = "");
+    JSONValidator &object(const nlohmann::json &json,
+                          const std::string &key,
+                          const std::string &parrentKey = "");
+    JSONValidator &array(const nlohmann::json &json,
+                         const std::string &key,
+                         const std::string &parrentKey = "");
     JSONValidator &onValid(std::function<void(const nlohmann::json &)> handler);
     JSONValidator &onNotFound(std::function<void(const nlohmann::json &, const std::string &err)> handler);
     JSONValidator &onTypeInvalid(std::function<void(const nlohmann::json &, const std::string &err)> handler);
+    JSONValidator &onInvalid(std::function<void(const nlohmann::json &, const std::string &err)> handler);
+    JSONValidator &onInvalid(std::function<void(const std::string &err)> handler);
+    JSONValidator &onInvalid(std::function<void()> handler);
     void throwError();
 };
 

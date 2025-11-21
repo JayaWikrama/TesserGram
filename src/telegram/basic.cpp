@@ -6,6 +6,7 @@
 #include "json-validator.hpp"
 #include "nlohmann/json.hpp"
 #include "utils/include/debug.hpp"
+#include "utils/include/error.hpp"
 
 static const std::string ChatActionStr[] = {
     "typing",
@@ -21,35 +22,32 @@ bool Telegram::__parseGetUpdatesResponse(const std::string &buffer)
     try
     {
         nlohmann::json json = nlohmann::json::parse(buffer);
-        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+        JSONValidator jval(__FILE__, __LINE__, __func__);
 
-        if (json.contains("result"))
+        jval.getArray(json, "result");
+
+        nlohmann::json &jsonResult = json["result"];
+
+        if (jsonResult.empty())
+            return false;
+
+        long long updateId = 0;
+        for (const nlohmann::json &el : jsonResult)
         {
-            nlohmann::json &jsonResult = json["result"];
-
-            if (jsonResult.empty())
-                return false;
-
-            long long updateId = 0;
-            for (const nlohmann::json &el : jsonResult)
+            try
             {
-                try
-                {
-                    this->messages.emplace_back();
-                    updateId = jvalidator.get<long long>(el, "update_id");
-                    this->messages.back().parse(el);
-                    if (this->lastUpdateId < updateId)
-                        this->lastUpdateId = updateId;
-                }
-                catch (const std::exception &e)
-                {
-                    this->messages.pop_back();
-                    Debug::log(Debug::WARNING, __FILE__, __LINE__, __func__, "skip: %s!\n", e.what());
-                }
+                this->messages.emplace_back();
+                updateId = jval.get<long long>(el, "update_id");
+                this->messages.back().parse(el);
+                if (this->lastUpdateId < updateId)
+                    this->lastUpdateId = updateId;
+            }
+            catch (const std::exception &e)
+            {
+                this->messages.pop_back();
+                Debug::log(Debug::WARNING, __FILE__, __LINE__, __func__, "skip: %s!\n", e.what());
             }
         }
-        else
-            throw std::runtime_error(Error::fieldNotFound(__FILE__, __LINE__, __func__, "result"));
         return true;
     }
     catch (const std::exception &e)
@@ -73,13 +71,13 @@ bool Telegram::apiGetMe()
         try
         {
             nlohmann::json json = nlohmann::json::parse(req.getResponse());
-            JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+            JSONValidator jval(__FILE__, __LINE__, __func__);
 
-            nlohmann::json jsonResult = jvalidator.getObject(json, "result");
+            nlohmann::json jsonResult = jval.getObject(json, "result");
 
-            this->id = jvalidator.get<long long>(jsonResult, "id", "result");
-            this->name = jvalidator.get<std::string>(jsonResult, "first_name", "result");
-            this->username = jvalidator.get<std::string>(jsonResult, "username", "result");
+            this->id = jval.get<long long>(jsonResult, "id", "result");
+            this->name = jval.get<std::string>(jsonResult, "first_name", "result");
+            this->username = jval.get<std::string>(jsonResult, "username", "result");
             return true;
         }
         catch (const std::exception &e)

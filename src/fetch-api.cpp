@@ -17,15 +17,24 @@ bool FetchAPI::Mime::parse(const nlohmann::json &json)
 {
   try
   {
-    JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+    JSONValidator jval(__FILE__, __LINE__, __func__);
 
-    this->name = jvalidator.get<std::string>(json, "name");
-    this->data = jvalidator.get<std::string>(json, "data");
-    if (json.contains("content_type"))
-      this->type = jvalidator.get<std::string>(json, "content_type");
-    else
-      this->type.clear();
-    this->file = jvalidator.get<bool>(json, "is_file");
+    this->name = jval.get<std::string>(json, "name");
+    this->data = jval.get<std::string>(json, "data");
+
+    jval.validate<std::string>(json, "content_type")
+        .onValid(
+            [this](const nlohmann::json &jsonContentType)
+            {
+              this->type = jsonContentType.get<std::string>();
+            })
+        .onInvalid(
+            [this]()
+            {
+              this->type.clear();
+            });
+
+    this->file = jval.get<bool>(json, "is_file");
     return true;
   }
   catch (const std::exception &e)

@@ -37,27 +37,37 @@ bool Chat::parse(const nlohmann::json &json)
 {
     try
     {
-        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+        JSONValidator jval(__FILE__, __LINE__, __func__);
 
-        if (json.contains("type"))
-        {
-            std::string chatType = jvalidator.get<std::string>(json, "type");
-            if (chatType.compare("group") == 0)
-                this->type = Chat::Type::GROUP;
-            else if (chatType.compare("supergroup") == 0)
-                this->type == Chat::Type::SUPERGROUP;
-            else if (chatType.compare("channel") == 0)
-                this->type = Chat::Type::CHANNEL;
-        }
+        jval.validate<std::string>(json, "type")
+            .onValid(
+                [this](const nlohmann::json &jsonType)
+                {
+                    std::string chatType = jsonType.get<std::string>();
+                    if (chatType.compare("group") == 0)
+                        this->type = Chat::Type::GROUP;
+                    else if (chatType.compare("supergroup") == 0)
+                        this->type == Chat::Type::SUPERGROUP;
+                    else if (chatType.compare("channel") == 0)
+                        this->type = Chat::Type::CHANNEL;
+                    else
+                        this->type = Chat::Type::PRIVATE;
+                });
 
-        this->id = jvalidator.get<long long>(json, "id");
-        this->firstName = jvalidator.get<std::string>(json, "first_name");
-        if (json.contains("last_name"))
-            this->lastName = jvalidator.get<std::string>(json, "last_name");
-        this->username = jvalidator.get<std::string>(json, "username");
+        this->id = jval.get<long long>(json, "id");
+        this->firstName = jval.get<std::string>(json, "first_name");
+
+        jval.validate<std::string>(json, "last_name")
+            .onValid(
+                [this](const nlohmann::json &jsonLastName)
+                {
+                    this->lastName = jsonLastName.get<std::string>();
+                });
+
+        this->username = jval.get<std::string>(json, "username");
 
         if (this->type != Chat::Type::PRIVATE)
-            this->title = jvalidator.get<std::string>(json, "title");
+            this->title = jval.get<std::string>(json, "title");
         else
         {
             this->title = this->firstName;

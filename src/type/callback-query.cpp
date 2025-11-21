@@ -22,43 +22,51 @@ bool CallbackQuery::parse(const nlohmann::json &json)
 {
     try
     {
-        JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+        JSONValidator jval(__FILE__, __LINE__, __func__);
 
-        try
-        {
-            this->id = jvalidator.get<long long>(json, "id");
-        }
-        catch (const std::exception &e)
-        {
-            this->id = std::stoll(jvalidator.get<std::string>(json, "id"));
-        }
+        jval.validate<long long>(json, "id")
+            .onValid(
+                [&](const nlohmann::json &jid)
+                {
+                    this->id = jid.get<long long>();
+                })
+            .onInvalid(
+                [&](const nlohmann::json &jid, const std::string &err)
+                {
+                    this->id = std::stoll(jid.get<std::string>());
+                });
 
-        try
-        {
-            this->chatInstance = jvalidator.get<std::string>(json, "chat_instance");
-        }
-        catch (const std::exception &e)
-        {
-            this->chatInstance = std::stoll(jvalidator.get<std::string>(json, "chat_instance"));
-        }
-        this->data = jvalidator.get<std::string>(json, "data");
+        jval.validate<long long>(json, "chat_instance")
+            .onValid(
+                [&](const nlohmann::json &jci)
+                {
+                    this->chatInstance = jci.get<long long>();
+                })
+            .onInvalid(
+                [&](const nlohmann::json &jci, const std::string &err)
+                {
+                    this->chatInstance = std::stoll(jci.get<std::string>());
+                });
 
-        const nlohmann::json &jsonFrom = jvalidator.getObject(json, "from");
+        this->data = jval.get<std::string>(json, "data");
+
+        const nlohmann::json &jsonFrom = jval.getObject(json, "from");
 
         this->from.parse(jsonFrom);
 
-        if (json.contains("message"))
-        {
-            const nlohmann::json &jsonMessage = jvalidator.getObject(json, "message");
-            this->message.reset(new Message());
-            if (this->message.get() != nullptr)
-            {
-                if (this->message->parse(jsonMessage) == false)
+        jval.object(json, "message")
+            .onValid(
+                [this](const nlohmann::json &jmsg)
                 {
-                    this->message.reset();
-                }
-            }
-        }
+                    this->message.reset(new Message);
+                    if (this->message.get() != nullptr)
+                    {
+                        if (this->message->parse(jmsg) == false)
+                        {
+                            this->message.reset();
+                        }
+                    }
+                });
 
         return true;
     }

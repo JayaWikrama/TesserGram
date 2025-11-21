@@ -16,21 +16,27 @@ NodeMessage::~NodeMessage()
 
 void NodeMessage::parse(const nlohmann::json &message)
 {
-    JSONValidator jvalidator(__FILE__, __LINE__, __func__);
+    JSONValidator jval(__FILE__, __LINE__, __func__);
 
-    this->updateId = jvalidator.get<long long>(message, "update_id");
+    this->updateId = jval.get<long long>(message, "update_id");
 
-    if (message.contains("callback_query"))
-    {
-        const nlohmann::json &jsonCallbackQuery = jvalidator.getObject(message, "callback_query");
-        this->callbackQuery.parse(jsonCallbackQuery);
-    }
-
-    else if (message.contains("message"))
-    {
-        const nlohmann::json &jsonMessage = jvalidator.getObject(message, "message");
-        this->message.parse(jsonMessage);
-    }
+    jval.object(message, "callback_query")
+        .onValid(
+            [this](const nlohmann::json &jsonCallbackQuery)
+            {
+                this->callbackQuery.parse(jsonCallbackQuery);
+            })
+        .onNotFound(
+            [this](const nlohmann::json &jalt, const std::string &err)
+            {
+                JSONValidator mval(__FILE__, __LINE__, __func__);
+                mval.object(jalt, "message")
+                    .onValid(
+                        [this](const nlohmann::json &jsonMessage)
+                        {
+                            this->message.parse(jsonMessage);
+                        });
+            });
 
     if (this->message.empty() && this->callbackQuery.empty())
     {

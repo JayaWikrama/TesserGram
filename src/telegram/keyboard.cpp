@@ -4,6 +4,7 @@
 #include "telegram.hpp"
 #include "request.hpp"
 #include "utils/include/debug.hpp"
+#include "utils/include/error.hpp"
 #include "json-validator.hpp"
 #include "nlohmann/json.hpp"
 
