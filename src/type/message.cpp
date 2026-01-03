@@ -26,7 +26,7 @@ bool Message::parse(const nlohmann::json &json)
     {
         JSONValidator jval(__FILE__, __LINE__, __func__);
 
-        jval.validate<std::string>(json, "date")
+        jval.validate<long>(json, "date")
             .onValid(
                 [this](const nlohmann::json &jsonDate)
                 {

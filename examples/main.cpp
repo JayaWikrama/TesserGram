@@ -3,11 +3,11 @@
 #include <sstream>
 #include <string>
 #include <thread>
-#include "fetch-api.hpp"
 #include "telegram.hpp"
 #include "json-validator.hpp"
-#include "nlohmann/json.hpp"
+#include "utils/include/nlohmann/json.hpp"
 #include "utils/include/debug.hpp"
+#include "fetchapi/include/fetch-api.hpp"
 
 class MyBot
 {

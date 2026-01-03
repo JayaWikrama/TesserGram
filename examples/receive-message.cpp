@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <thread>
 #include "telegram.hpp"
-#include "nlohmann/json.hpp"
+#include "utils/include/nlohmann/json.hpp"
 #include "utils/include/debug.hpp"
 
 int main(int argc, char **argv)

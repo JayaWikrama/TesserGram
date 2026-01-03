@@ -1,9 +1,9 @@
-#include "fetch-api.hpp"
 #include "request.hpp"
 #include "json-validator.hpp"
 #include "nlohmann/json.hpp"
 #include "utils/include/debug.hpp"
 #include "utils/include/error.hpp"
+#include "fetchapi/include/fetch-api.hpp"
 
 #define CONNECTION_TIMEOUT 10
 #define ALL_TIMEOUT 15
@@ -37,7 +37,8 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
             [this](const std::string &payload)
             { 
                 this->success = true;
-                this->response = payload; })
+                this->response = payload;
+                Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "response: %s\n", payload.c_str()); })
         .onError(
             [this](FetchAPI::ReturnCode code, const std::string &err)
             {
@@ -50,6 +51,8 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
     this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(req)];
     FetchAPI fapi(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
 
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "request: %s\n", data.c_str());
+
     fapi.confidential(token)
         .header("Content-Type", "application/json")
         .post(data)
@@ -57,7 +60,8 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
             [this](const std::string &payload)
             { 
                 this->success = true;
-                this->response = payload; })
+                this->response = payload;
+                Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "response: %s\n", payload.c_str()); })
         .onError(
             [this](FetchAPI::ReturnCode code, const std::string &err)
             {
@@ -76,7 +80,8 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
             [this](const std::string &payload)
             { 
                 this->success = true;
-                this->response = payload; })
+                this->response = payload;
+                Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "response: %s\n", payload.c_str()); })
         .onError(
             [this](FetchAPI::ReturnCode code, const std::string &err)
             {

@@ -84,6 +84,7 @@
     "C_Cpp.default.includePath": [
         "${workspaceFolder}/include",
         "${workspaceFolder}/external",
+        "${workspaceFolder}/external/utils/include",
         "${workspaceFolder}/external/mongoose/include",
         "/usr/include",
         "/usr/local/include",

@@ -66,36 +66,35 @@ void NodeMessage::display() const
             dtime.tm_min,
             dtime.tm_sec);
     dtimestr[19] = 0x00;
-    Debug debug(0);
-    debug.log(Debug::INFO, __func__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
-    debug.log(Debug::INFO, __func__, "  Type      : %s\n", (this->callbackQuery.empty() ? "message" : "callback_query"));
-    debug.log(Debug::INFO, __func__, "  Id        : %lli\n", (this->message.empty() == false ? this->message.id : this->callbackQuery.id));
-    debug.log(Debug::INFO, __func__, "  Sender    : %s\n", (this->message.empty() == false ? this->message.from.username.c_str() : this->callbackQuery.message->from.username.c_str()));
-    debug.log(Debug::INFO, __func__, "  Room Id   : %lli\n", (this->message.empty() == false ? this->message.chat.id : this->callbackQuery.message->chat.id));
-    debug.log(Debug::INFO, __func__, "  Room Name : %s\n", (this->message.empty() == false ? this->message.chat.title.c_str() : this->callbackQuery.message->chat.title.c_str()));
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Type      : %s\n", (this->callbackQuery.empty() ? "message" : "callback_query"));
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Id        : %lli\n", (this->message.empty() == false ? this->message.id : this->callbackQuery.id));
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Sender    : %s\n", (this->message.empty() == false ? this->message.from.username.c_str() : this->callbackQuery.message->from.username.c_str()));
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Id   : %lli\n", (this->message.empty() == false ? this->message.chat.id : this->callbackQuery.message->chat.id));
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Name : %s\n", (this->message.empty() == false ? this->message.chat.title.c_str() : this->callbackQuery.message->chat.title.c_str()));
     if (this->callbackQuery.empty())
     {
         if (this->message.text.length())
         {
-            debug.log(Debug::INFO, __func__, "  Message   : %s\n", this->message.text.c_str());
+            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Message   : %s\n", this->message.text.c_str());
         }
         if (this->message.media.size() == 1)
         {
-            debug.log(Debug::INFO, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
-            debug.log(Debug::INFO, __func__, "  Media Id  : %s\n", this->message.media.at(0).fileId.c_str());
+            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
+            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media Id  : %s\n", this->message.media.at(0).fileId.c_str());
         }
         else if (this->message.media.size() > 1)
         {
-            debug.log(Debug::INFO, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
+            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
             for (int i = 0; i < this->message.media.size(); i++)
             {
-                debug.log(Debug::INFO, __func__, "    M.id[%d] : %s\n", i, this->message.media.at(i).fileId.c_str());
+                Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "    M.id[%d] : %s\n", i, this->message.media.at(i).fileId.c_str());
             }
         }
     }
     else
     {
-        debug.log(Debug::INFO, __func__, "  Data      : %s\n", this->callbackQuery.data.c_str());
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Data      : %s\n", this->callbackQuery.data.c_str());
     }
 }
 

@@ -3,7 +3,7 @@
 
 #include <functional>
 #include "type.hpp"
-#include "nlohmann/json_fwd.hpp"
+#include "utils/include/nlohmann/json_fwd.hpp"
 
 class NodeMessage
 {

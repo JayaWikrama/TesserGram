@@ -31,7 +31,7 @@ endif()
 
 # Set the default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Release)
+  set(CMAKE_BUILD_TYPE Debug)
 endif()
 
 # Verbose compile option
@@ -42,8 +42,6 @@ endif()
 
 # Specify the source files
 set(SOURCE_FILES
-  src/json-validator.cpp
-  src/fetch-api.cpp
   src/request.cpp
   src/polling-controller.cpp
   src/type/user.cpp
@@ -64,14 +62,14 @@ set(SOURCE_FILES
 add_library(${PROJECT_NAME}-obj OBJECT ${SOURCE_FILES})
 
 # Create static library
-add_library(${PROJECT_NAME}-ar STATIC $<TARGET_OBJECTS:${PROJECT_NAME}-obj>)
+add_library(${PROJECT_NAME}-ar STATIC $<TARGET_OBJECTS:${PROJECT_NAME}-obj> $<TARGET_OBJECTS:fetchapi-obj> $<TARGET_OBJECTS:utils-obj>)
 set_target_properties(${PROJECT_NAME}-ar PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 if(BUILD_DEBUG)
   set_target_properties(${PROJECT_NAME}-ar PROPERTIES COMPILE_OPTIONS "-g" LINK_OPTIONS "-g")
 endif()
 
 # Create shared library from static library
-add_library(${PROJECT_NAME}-lib SHARED $<TARGET_OBJECTS:${PROJECT_NAME}-obj>)
+add_library(${PROJECT_NAME}-lib SHARED $<TARGET_OBJECTS:${PROJECT_NAME}-obj> $<TARGET_OBJECTS:fetchapi-obj> $<TARGET_OBJECTS:utils-obj>)
 set_target_properties(${PROJECT_NAME}-lib PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 if(BUILD_DEBUG)
   set_target_properties(${PROJECT_NAME}-lib PROPERTIES COMPILE_OPTIONS "-g" LINK_OPTIONS "-g")
@@ -85,6 +83,7 @@ set(INCLUDE_DIRS
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external>
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/mongoose/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/utils/include>
   $<INSTALL_INTERFACE:include>
   ${CURL_INCLUDE_DIR}
 )
@@ -93,39 +92,39 @@ target_include_directories(${PROJECT_NAME}-ar PUBLIC ${INCLUDE_DIRS})
 target_include_directories(${PROJECT_NAME}-lib PUBLIC ${INCLUDE_DIRS})
 
 # Add dependencies
-add_dependencies(${PROJECT_NAME}-lib utils-ar)
+add_dependencies(${PROJECT_NAME}-lib utils-obj fetchapi-obj)
 
 # Create example executable
 
 ## Main Example
 add_executable(${PROJECT_NAME} examples/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-lib utils-ar)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES} -lpthread)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}-ar)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CURL_LIBRARIES} pthread lzma)
 
 ## Send Message Example
 add_executable(${PROJECT_NAME}-receive-message examples/receive-message.cpp)
-target_link_libraries(${PROJECT_NAME}-receive-message PRIVATE ${PROJECT_NAME}-lib utils-ar)
-target_link_libraries(${PROJECT_NAME}-receive-message PUBLIC ${CURL_LIBRARIES} -lpthread)
+target_link_libraries(${PROJECT_NAME}-receive-message PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-receive-message PUBLIC ${CURL_LIBRARIES} pthread lzma)
 
 ## Send Message Example
 add_executable(${PROJECT_NAME}-send-message examples/send-message.cpp)
-target_link_libraries(${PROJECT_NAME}-send-message PRIVATE ${PROJECT_NAME}-lib utils-ar)
-target_link_libraries(${PROJECT_NAME}-send-message PUBLIC ${CURL_LIBRARIES} -lpthread)
+target_link_libraries(${PROJECT_NAME}-send-message PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-send-message PUBLIC ${CURL_LIBRARIES} pthread lzma)
 
 ## Keyboard Example
 add_executable(${PROJECT_NAME}-keyboard examples/keyboard.cpp)
-target_link_libraries(${PROJECT_NAME}-keyboard PRIVATE ${PROJECT_NAME}-lib utils-ar)
-target_link_libraries(${PROJECT_NAME}-keyboard PUBLIC ${CURL_LIBRARIES} -lpthread)
+target_link_libraries(${PROJECT_NAME}-keyboard PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-keyboard PUBLIC ${CURL_LIBRARIES} pthread lzma)
 
 ## Inline Keyboard Example
 add_executable(${PROJECT_NAME}-inline-keyboard examples/inline-keyboard.cpp)
-target_link_libraries(${PROJECT_NAME}-inline-keyboard PRIVATE ${PROJECT_NAME}-lib utils-ar)
-target_link_libraries(${PROJECT_NAME}-inline-keyboard PUBLIC ${CURL_LIBRARIES} -lpthread)
+target_link_libraries(${PROJECT_NAME}-inline-keyboard PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-inline-keyboard PUBLIC ${CURL_LIBRARIES} pthread lzma)
 
 ## Media Example
 add_executable(${PROJECT_NAME}-media examples/media.cpp)
-target_link_libraries(${PROJECT_NAME}-media PRIVATE ${PROJECT_NAME}-lib utils-ar)
-target_link_libraries(${PROJECT_NAME}-media PUBLIC ${CURL_LIBRARIES} -lpthread)
+target_link_libraries(${PROJECT_NAME}-media PRIVATE ${PROJECT_NAME}-lib)
+target_link_libraries(${PROJECT_NAME}-media PUBLIC ${CURL_LIBRARIES} pthread lzma)
 
 # Compiler and linker flags
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -137,5 +136,8 @@ set(CMAKE_C_FLAGS_RELEASE "-O3 -fPIC")
 add_definitions(-DCXXSTD_11)
 add_definitions(-D__TESSERGRAM_DATA_DIRECTORY__="root.tessergram.data/")
 
-# Add subdirectory for DataFrame
+# Add subdirectory
 add_subdirectory(external/utils EXCLUDE_FROM_ALL)
+
+set(FETCHAPI_OBJECT_ONLY ON CACHE BOOL "build fetchapi as object-only dependency" FORCE)
+add_subdirectory(external/fetchapi EXCLUDE_FROM_ALL)
