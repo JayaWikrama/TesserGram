@@ -74,6 +74,11 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
     this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(req)];
     FetchAPI fapi(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
 
+    if (!data.is_array())
+    {
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "upload data must be a JSON array of MIME parts\n");
+        return;
+    }
     fapi.confidential(token)
         .upload(data.dump())
         .onSuccess(
@@ -89,71 +94,77 @@ Request::Request(const std::string &url, const std::string &token, Request::Type
                 Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "[%02X] %s\n", code, err.c_str()); });
 }
 
+static std::string fetchMediaPath(const std::string &url, const std::string &token, const std::string &fileId)
+{
+    std::string apiUrl = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(Request::Type::GET_MEDIA_PATH)];
+    FetchAPI fapi(apiUrl, CONNECTION_TIMEOUT, ALL_TIMEOUT);
+
+    nlohmann::json body;
+    body["file_id"] = fileId;
+
+    std::string mediaPath;
+    fapi.confidential(token)
+        .post(body.dump())
+        .onSuccess(
+            [&](const std::string &payload)
+            {
+                try
+                {
+                    nlohmann::json json = nlohmann::json::parse(payload);
+                    JSONValidator jval(__FILE__, __LINE__, __func__);
+                    nlohmann::json jsonResult = jval.getObject(json, "result");
+                    mediaPath = jval.get<std::string>(jsonResult, "file_path", "result");
+                }
+                catch (const std::exception &e)
+                {
+                    Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "failed to parse payload: %s!\n", e.what());
+                }
+            })
+        .onError(
+            [](FetchAPI::ReturnCode code, const std::string &err)
+            {
+                Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "[%02X] %s\n", code, err.c_str());
+            });
+
+    return mediaPath;
+}
+
 Request::Request(const std::string &url, const std::string &token, Request::Type req, const std::string &ref, std::vector<unsigned char> &data)
 {
-    std::string mediaPath = ref;
     this->success = false;
+    std::string mediaPath = ref;
+
     if (req == Request::Type::DOWNLOAD_MEDIA_BY_FILE_ID)
     {
-        this->url = url + (url.at(url.length() - 1) == '/' ? "bot" : "/bot") + token + "/" + reqStr[static_cast<std::size_t>(Request::Type::GET_MEDIA_PATH)];
-        FetchAPI fapi(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
-
-        nlohmann::json data;
-        data["file_id"] = ref;
-
-        fapi.confidential(token)
-            .post(data.dump())
-            .onSuccess(
-                [&](const std::string &payload)
-                { 
-                    this->success = true;
-                    try
-                    {
-                        nlohmann::json json = nlohmann::json::parse(payload);
-                        JSONValidator jval(__FILE__, __LINE__, __func__);
-
-                        nlohmann::json jsonResult = jval.getObject(json, "result");
-                        mediaPath = jval.get<std::string>(jsonResult, "file_path", "result");
-
-                        this->response = mediaPath;
-                        req = Request::Type::DOWNLOAD_MEDIA_BY_PATH;
-                    }
-                    catch (const std::exception &e)
-                    {
-                        this->success = false;
-                        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "failed to parse payload: %s!\n", e.what());
-                    } })
-            .onError(
-                [this](FetchAPI::ReturnCode code, const std::string &err)
-                {
-                    this->success = false;
-                    Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "[%02X] %s\n", code, err.c_str()); });
+        mediaPath = fetchMediaPath(url, token, ref);
+        if (mediaPath.empty())
+            return;
     }
-    if (req == Request::Type::DOWNLOAD_MEDIA_BY_PATH)
-    {
-        this->url = url + (url.at(url.length() - 1) == '/' ? "file/bot" : "/file/bot") + token + "/" + mediaPath;
-        FetchAPI fapi(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
 
-        fapi.confidential(token)
-            .download(data)
-            .onSuccess(
-                [&](const std::string &payload)
-                { 
-                    this->success = true;
-                    this->response = mediaPath; })
-            .onError(
-                [this](FetchAPI::ReturnCode code, const std::string &err)
-                {
-                    this->success = false;
-                    Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "[%02X] %s\n", code, err.c_str()); });
-    }
+    this->url = url + (url.at(url.length() - 1) == '/' ? "file/bot" : "/file/bot") + token + "/" + mediaPath;
+    FetchAPI fapi(this->url, CONNECTION_TIMEOUT, ALL_TIMEOUT);
+
+    fapi.confidential(token)
+        .download(data)
+        .onSuccess(
+            [&](const std::string &payload)
+            {
+                this->success = true;
+                this->response = mediaPath;
+            })
+        .onError(
+            [this](FetchAPI::ReturnCode code, const std::string &err)
+            {
+                this->success = false;
+                Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "[%02X] %s\n", code, err.c_str());
+            });
 }
 
 Request::~Request()
 {
 }
 
-bool Request::isSuccess()
+bool Request::isSuccess() const
 {
     return this->success;
 }

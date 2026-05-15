@@ -8,16 +8,7 @@
 #include "utils/include/debug.hpp"
 #include "utils/include/error.hpp"
 
-static const std::string ChatActionStr[] = {
-    "typing",
-    "upload_photo",
-    "record_video",
-    "upload_video",
-    "record_voice",
-    "upload_voice",
-    "upload_document"};
-
-bool Telegram::__parseGetUpdatesResponse(const std::string &buffer)
+bool Telegram::parseUpdatesUnlocked(const std::string &buffer)
 {
     try
     {
@@ -60,7 +51,7 @@ bool Telegram::__parseGetUpdatesResponse(const std::string &buffer)
 bool Telegram::parseGetUpdatesResponse(const std::string &buffer)
 {
     std::lock_guard<std::mutex> guard(this->mutex);
-    return this->__parseGetUpdatesResponse(buffer);
+    return this->parseUpdatesUnlocked(buffer);
 }
 
 bool Telegram::apiGetMe()
@@ -97,7 +88,7 @@ bool Telegram::apiGetUpdates()
         Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UPDATES, data);
         if (req.isSuccess())
         {
-            return this->__parseGetUpdatesResponse(req.getResponse());
+            return this->parseUpdatesUnlocked(req.getResponse());
         }
     }
     else
@@ -105,7 +96,7 @@ bool Telegram::apiGetUpdates()
         Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UPDATES);
         if (req.isSuccess())
         {
-            return this->__parseGetUpdatesResponse(req.getResponse());
+            return this->parseUpdatesUnlocked(req.getResponse());
         }
     }
     return false;

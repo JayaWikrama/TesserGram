@@ -62,6 +62,10 @@ public:
     void reset();
 
     static const std::string &actionToString(const Chat::Action &action);
+
+private:
+    bool parsePrivateFields(const nlohmann::json &json);
+    bool parseGroupFields(const nlohmann::json &json);
 };
 
 class Media

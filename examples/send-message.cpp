@@ -17,7 +17,9 @@ int main(int argc, char **argv)
     {
         telegram.info();
 
-        telegram.apiSendMessage(env["bot"]["target_id"].get<long long>(), "example message!");
+        const nlohmann::json &jTarget = env["bot"]["target_id"];
+        long long targetId = jTarget.is_number() ? jTarget.get<long long>() : std::stoll(jTarget.get<std::string>());
+        telegram.apiSendMessage(targetId, "example message!");
     }
     else
     {

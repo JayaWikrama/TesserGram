@@ -27,7 +27,9 @@ int main(int argc, char **argv)
             .add(TKeyboard::TKeyButton::Type::URL, "Google", "www.google.com")
             .add(buttons);
 
-        telegram.apiSendKeyboard(env["bot"]["target_id"].get<long long>(), keyboard);
+        const nlohmann::json &jTarget = env["bot"]["target_id"];
+        long long targetId = jTarget.is_number() ? jTarget.get<long long>() : std::stoll(jTarget.get<std::string>());
+        telegram.apiSendKeyboard(targetId, keyboard);
     }
     else
     {

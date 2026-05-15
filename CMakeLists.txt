@@ -54,6 +54,7 @@ set(SOURCE_FILES
   src/telegram/basic.cpp
   src/telegram/media.cpp
   src/telegram/webhook.cpp
+  src/telegram/webhook-server.cpp
   src/telegram/keyboard.cpp
   external/mongoose/src/mongoose.c
 )
@@ -141,3 +142,15 @@ add_subdirectory(external/utils EXCLUDE_FROM_ALL)
 
 set(FETCHAPI_OBJECT_ONLY ON CACHE BOOL "build fetchapi as object-only dependency" FORCE)
 add_subdirectory(external/fetchapi EXCLUDE_FROM_ALL)
+
+# Test executable
+file(GLOB TEST_SOURCES tests/src/test-*.cpp)
+add_executable(${PROJECT_NAME}-test ${TEST_SOURCES})
+target_include_directories(${PROJECT_NAME}-test PRIVATE
+    tests/include
+    ${INCLUDE_DIRS}
+)
+target_link_libraries(${PROJECT_NAME}-test PRIVATE ${PROJECT_NAME}-ar)
+target_link_libraries(${PROJECT_NAME}-test PUBLIC ${CURL_LIBRARIES} pthread lzma)
+enable_testing()
+add_test(NAME tessergram-unit COMMAND ${PROJECT_NAME}-test)

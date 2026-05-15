@@ -4,6 +4,14 @@
 #include <string>
 #include "utils/include/nlohmann/json_fwd.hpp"
 
+#if __cplusplus >= 201703L
+#  define NODISCARD [[nodiscard]]
+#elif defined(__GNUC__) || defined(__clang__)
+#  define NODISCARD __attribute__((warn_unused_result))
+#else
+#  define NODISCARD
+#endif
+
 class Request
 {
 private:
@@ -36,7 +44,7 @@ public:
     Request(const std::string &url, const std::string &token, Type req, const nlohmann::json &data);
     Request(const std::string &url, const std::string &token, Type req, const std::string &ref, std::vector<unsigned char> &data);
     ~Request();
-    bool isSuccess();
+    NODISCARD bool isSuccess() const;
     const std::string &getResponse() const;
 };
 

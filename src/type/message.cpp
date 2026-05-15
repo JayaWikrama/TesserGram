@@ -26,11 +26,11 @@ bool Message::parse(const nlohmann::json &json)
     {
         JSONValidator jval(__FILE__, __LINE__, __func__);
 
-        jval.validate<long>(json, "date")
+        jval.validate<long long>(json, "date")
             .onValid(
                 [this](const nlohmann::json &jsonDate)
                 {
-                    this->dtime = jsonDate.get<long>();
+                    this->dtime = static_cast<time_t>(jsonDate.get<long long>());
                 })
             .onInvalid(
                 [this]()
@@ -40,7 +40,7 @@ bool Message::parse(const nlohmann::json &json)
 
         this->id = jval.get<long long>(json, "message_id");
 
-        jval.validate<std::string>(json, "message_thread_id")
+        jval.validate<long long>(json, "message_thread_id")
             .onValid(
                 [this](const nlohmann::json &jsonMTId)
                 {
@@ -85,12 +85,9 @@ bool Message::parse(const nlohmann::json &json)
                 [this](const nlohmann::json &jsonReplyToMessage)
                 {
                     this->replyToMessage.reset(new Message());
-                    if (this->replyToMessage.get() != nullptr)
+                    if (this->replyToMessage->parse(jsonReplyToMessage) == false)
                     {
-                        if (this->replyToMessage->parse(jsonReplyToMessage) == false)
-                        {
-                            this->replyToMessage.reset();
-                        }
+                        this->replyToMessage.reset();
                     }
                 })
             .onInvalid(
@@ -147,6 +144,5 @@ void Message::reset()
     this->from.reset();
     this->chat.reset();
     this->media.clear();
-    if (this->replyToMessage.get() != nullptr)
-        this->replyToMessage.reset();
+    this->replyToMessage.reset();
 }

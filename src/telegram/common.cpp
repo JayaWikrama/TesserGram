@@ -3,6 +3,7 @@
 #include <cstring>
 #include "telegram.hpp"
 #include "polling-controller.hpp"
+#include "request.hpp"
 #include "utils/include/debug.hpp"
 
 Telegram::Telegram() : controller(3000, 10000), messages(), mutex()
@@ -58,10 +59,21 @@ void Telegram::info() const
 
 void Telegram::clearUpdates()
 {
-    if (this->apiGetUpdates())
+    std::lock_guard<std::mutex> guard(this->mutex);
+    if (this->lastUpdateId > 0)
     {
-        this->messages.clear();
+        std::string data = "{\"offset\":" + std::to_string(this->lastUpdateId + 1) + "}";
+        Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UPDATES, data);
+        if (req.isSuccess())
+            this->parseUpdatesUnlocked(req.getResponse());
     }
+    else
+    {
+        Request req(TELEGRAM_BASE_URL, this->token, Request::Type::UPDATES);
+        if (req.isSuccess())
+            this->parseUpdatesUnlocked(req.getResponse());
+    }
+    this->messages.clear();
 }
 
 bool Telegram::getUpdates(std::function<void(Telegram &, const NodeMessage &)> handler)

@@ -228,7 +228,7 @@ bool Telegram::apiEditInlineKeyboard(long long targetId, long long messageId, co
     }
 
     nlohmann::json jsonKeyboard = {
-        {"keyboard", jsonButton}};
+        {"inline_keyboard", jsonButton}};
 
     nlohmann::json json = {
         {"chat_id", targetId},

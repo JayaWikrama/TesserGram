@@ -44,57 +44,64 @@ void NodeMessage::parse(const nlohmann::json &message)
     }
 }
 
+static void displayCallbackQuery(const CallbackQuery &cq, long long updateId, const char *dtimestr)
+{
+    long long roomId = 0;
+    const char *roomName = "<n/a>";
+    if (cq.message != nullptr)
+    {
+        roomId = cq.message->chat.id;
+        roomName = cq.message->chat.title.c_str();
+    }
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Update ID   : %lli [%s]\n", updateId, dtimestr);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Type      : callback_query\n");
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Id        : %lli\n", cq.id);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Sender    : %s\n", cq.from.username.c_str());
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Id   : %lli\n", roomId);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Name : %s\n", roomName);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Data      : %s\n", cq.data.c_str());
+}
+
 void NodeMessage::display() const
 {
     struct tm dtime;
     char dtimestr[64];
-    if (this->callbackQuery.empty() == false)
+
+    if (!this->callbackQuery.empty())
     {
+        // callback_query carries no server timestamp; substitute local wall-clock time for display
         time_t ctime = time(nullptr);
-        memcpy(&dtime, localtime(&ctime), sizeof(dtime));
+        localtime_r(&ctime, &dtime);
+        strftime(dtimestr, sizeof(dtimestr), "%Y-%m-%d %H:%M:%S", &dtime);
+        displayCallbackQuery(this->callbackQuery, this->updateId, dtimestr);
+        return;
     }
-    else
-    {
-        memcpy(&dtime, localtime(&(this->message.dtime)), sizeof(dtime));
-    }
-    sprintf(dtimestr,
-            "%04d-%02d-%02d %02d:%02d:%02d",
-            dtime.tm_year + 1900,
-            dtime.tm_mon + 1,
-            dtime.tm_mday,
-            dtime.tm_hour,
-            dtime.tm_min,
-            dtime.tm_sec);
-    dtimestr[19] = 0x00;
+
+    localtime_r(&(this->message.dtime), &dtime);
+    strftime(dtimestr, sizeof(dtimestr), "%Y-%m-%d %H:%M:%S", &dtime);
+
     Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "Update ID   : %lli [%s]\n", this->updateId, dtimestr);
-    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Type      : %s\n", (this->callbackQuery.empty() ? "message" : "callback_query"));
-    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Id        : %lli\n", (this->message.empty() == false ? this->message.id : this->callbackQuery.id));
-    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Sender    : %s\n", (this->message.empty() == false ? this->message.from.username.c_str() : this->callbackQuery.message->from.username.c_str()));
-    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Id   : %lli\n", (this->message.empty() == false ? this->message.chat.id : this->callbackQuery.message->chat.id));
-    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Name : %s\n", (this->message.empty() == false ? this->message.chat.title.c_str() : this->callbackQuery.message->chat.title.c_str()));
-    if (this->callbackQuery.empty())
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Type      : message\n");
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Id        : %lli\n", this->message.id);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Sender    : %s\n", this->message.from.username.c_str());
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Id   : %lli\n", this->message.chat.id);
+    Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Room Name : %s\n", this->message.chat.title.c_str());
+    if (this->message.text.length())
     {
-        if (this->message.text.length())
-        {
-            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Message   : %s\n", this->message.text.c_str());
-        }
-        if (this->message.media.size() == 1)
-        {
-            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
-            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media Id  : %s\n", this->message.media.at(0).fileId.c_str());
-        }
-        else if (this->message.media.size() > 1)
-        {
-            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
-            for (int i = 0; i < this->message.media.size(); i++)
-            {
-                Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "    M.id[%d] : %s\n", i, this->message.media.at(i).fileId.c_str());
-            }
-        }
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Message   : %s\n", this->message.text.c_str());
     }
-    else
+    if (this->message.media.size() == 1)
     {
-        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Data      : %s\n", this->callbackQuery.data.c_str());
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media Id  : %s\n", this->message.media.at(0).fileId.c_str());
+    }
+    else if (this->message.media.size() > 1)
+    {
+        Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "  Media T   : %s\n", this->message.media.at(0).getType().c_str());
+        for (std::size_t i = 0; i < this->message.media.size(); i++)
+        {
+            Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "    M.id[%zu] : %s\n", i, this->message.media.at(i).fileId.c_str());
+        }
     }
 }
 

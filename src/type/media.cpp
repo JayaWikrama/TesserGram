@@ -44,16 +44,24 @@ bool Media::parse(Media::Type type, const nlohmann::json &json)
 
         this->type = type;
 
-        jval.validate<std::string>(json, "file_size")
+        jval.validate<long long>(json, "file_size")
             .onValid(
                 [this](const nlohmann::json &jsonFZ)
                 {
                     this->fileSize = jsonFZ.get<long long>();
                 })
             .onInvalid(
-                [this]()
+                [this](const nlohmann::json &jsonFZ, const std::string &)
                 {
-                    this->fileSize = 0;
+                    // fallback: some API variants send file_size as a numeric string
+                    try
+                    {
+                        this->fileSize = std::stoll(jsonFZ.get<std::string>());
+                    }
+                    catch (const std::exception &)
+                    {
+                        this->fileSize = 0;
+                    }
                 });
 
         this->fileId = jval.get<std::string>(json, "file_id");
@@ -63,7 +71,7 @@ bool Media::parse(Media::Type type, const nlohmann::json &json)
             .onValid(
                 [this](const nlohmann::json &jsonFName)
                 {
-                    this->fileName = jsonFName.get<long long>();
+                    this->fileName = jsonFName.get<std::string>();
                 });
 
         return true;

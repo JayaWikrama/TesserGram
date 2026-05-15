@@ -36,16 +36,11 @@ bool CallbackQuery::parse(const nlohmann::json &json)
                     this->id = std::stoll(jid.get<std::string>());
                 });
 
-        jval.validate<long long>(json, "chat_instance")
+        jval.validate<std::string>(json, "chat_instance")
             .onValid(
                 [&](const nlohmann::json &jci)
                 {
-                    this->chatInstance = jci.get<long long>();
-                })
-            .onInvalid(
-                [&](const nlohmann::json &jci, const std::string &err)
-                {
-                    this->chatInstance = std::stoll(jci.get<std::string>());
+                    this->chatInstance = jci.get<std::string>();
                 });
 
         this->data = jval.get<std::string>(json, "data");
@@ -59,12 +54,9 @@ bool CallbackQuery::parse(const nlohmann::json &json)
                 [this](const nlohmann::json &jmsg)
                 {
                     this->message.reset(new Message);
-                    if (this->message.get() != nullptr)
+                    if (this->message->parse(jmsg) == false)
                     {
-                        if (this->message->parse(jmsg) == false)
-                        {
-                            this->message.reset();
-                        }
+                        this->message.reset();
                     }
                 });
 
@@ -84,6 +76,5 @@ void CallbackQuery::reset()
     this->chatInstance.clear();
     this->data.clear();
     this->from.reset();
-    if (this->message.get() != nullptr)
-        this->message.reset();
+    this->message.reset();
 }

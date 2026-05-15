@@ -1,3 +1,4 @@
+#include <unordered_map>
 #include "type.hpp"
 #include "nlohmann/json.hpp"
 #include "json-validator.hpp"
@@ -5,7 +6,15 @@
 
 namespace
 {
-    static const std::array<std::string, 7> chatActionNames = {
+    // Canonical mapping: Chat::Action → wire string. Chat::actionToString() is
+    // the sole public accessor — no other translation unit should duplicate this.
+    constexpr std::size_t chatActionCount =
+        static_cast<std::size_t>(Chat::Action::UPLOAD_DOCUMENT) + 1;
+
+    static_assert(chatActionCount == 7,
+        "chatActionNames out of sync with Chat::Action enum — update both together");
+
+    static const std::array<std::string, chatActionCount> chatActionNames = {
         "typing",
         "upload_photo",
         "record_video",
@@ -15,6 +24,12 @@ namespace
         "upload_document"};
 
     static const std::string unknownChatActionName = "unknown";
+
+    static const std::unordered_map<std::string, Chat::Type> chatTypeMap = {
+        {"private",    Chat::Type::PRIVATE},
+        {"group",      Chat::Type::GROUP},
+        {"supergroup", Chat::Type::SUPERGROUP},
+        {"channel",    Chat::Type::CHANNEL}};
 }
 
 Chat::Chat()
@@ -33,6 +48,29 @@ bool Chat::empty() const
     return (this->id == 0);
 }
 
+bool Chat::parsePrivateFields(const nlohmann::json &json)
+{
+    JSONValidator jval(__FILE__, __LINE__, __func__);
+    this->firstName = jval.get<std::string>(json, "first_name");
+    jval.validate<std::string>(json, "last_name")
+        .onValid([this](const nlohmann::json &jln) { this->lastName = jln.get<std::string>(); });
+    jval.validate<std::string>(json, "username")
+        .onValid([this](const nlohmann::json &jun) { this->username = jun.get<std::string>(); });
+    this->title = this->firstName;
+    if (!this->lastName.empty())
+        this->title += " " + this->lastName;
+    return true;
+}
+
+bool Chat::parseGroupFields(const nlohmann::json &json)
+{
+    JSONValidator jval(__FILE__, __LINE__, __func__);
+    this->title = jval.get<std::string>(json, "title");
+    jval.validate<std::string>(json, "username")
+        .onValid([this](const nlohmann::json &jun) { this->username = jun.get<std::string>(); });
+    return true;
+}
+
 bool Chat::parse(const nlohmann::json &json)
 {
     try
@@ -44,39 +82,16 @@ bool Chat::parse(const nlohmann::json &json)
                 [this](const nlohmann::json &jsonType)
                 {
                     std::string chatType = jsonType.get<std::string>();
-                    if (chatType.compare("group") == 0)
-                        this->type = Chat::Type::GROUP;
-                    else if (chatType.compare("supergroup") == 0)
-                        this->type == Chat::Type::SUPERGROUP;
-                    else if (chatType.compare("channel") == 0)
-                        this->type = Chat::Type::CHANNEL;
-                    else
-                        this->type = Chat::Type::PRIVATE;
+                    auto it = chatTypeMap.find(chatType);
+                    this->type = (it != chatTypeMap.end()) ? it->second : Chat::Type::PRIVATE;
                 });
 
         this->id = jval.get<long long>(json, "id");
-        this->firstName = jval.get<std::string>(json, "first_name");
 
-        jval.validate<std::string>(json, "last_name")
-            .onValid(
-                [this](const nlohmann::json &jsonLastName)
-                {
-                    this->lastName = jsonLastName.get<std::string>();
-                });
-
-        this->username = jval.get<std::string>(json, "username");
-
-        if (this->type != Chat::Type::PRIVATE)
-            this->title = jval.get<std::string>(json, "title");
+        if (this->type == Chat::Type::PRIVATE)
+            return this->parsePrivateFields(json);
         else
-        {
-            this->title = this->firstName;
-            if (this->lastName.length() > 0)
-            {
-                this->title += " " + this->lastName;
-            }
-        }
-        return true;
+            return this->parseGroupFields(json);
     }
     catch (const std::exception &e)
     {

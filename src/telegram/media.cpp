@@ -23,64 +23,82 @@ static std::string getFileExtension(const std::string &filename)
 static std::string getMimeType(const std::string &filename)
 {
     static const std::unordered_map<std::string, std::string> mimeMap = {
-        {"jpg", "image/jpeg"},
+        // photo
+        {"jpg",  "image/jpeg"},
         {"jpeg", "image/jpeg"},
-        {"png", "image/png"},
-        {"gif", "image/gif"},
-        {"bmp", "image/bmp"},
+        {"png",  "image/png"},
+        {"gif",  "image/gif"},
+        {"bmp",  "image/bmp"},
         {"webp", "image/webp"},
         {"tiff", "image/tiff"},
-        {"tif", "image/tiff"},
-        {"svg", "image/svg+xml"},
-        {"ico", "image/x-icon"},
+        {"tif",  "image/tiff"},
+        {"svg",  "image/svg+xml"},
+        {"ico",  "image/x-icon"},
         {"heic", "image/heic"},
         {"heif", "image/heif"},
-        {"psd", "image/vnd.adobe.photoshop"},
-        {"txt", "text/plain"},
+        {"psd",  "image/vnd.adobe.photoshop"},
+        // video / animation
+        {"mp4",  "video/mp4"},
+        {"mov",  "video/quicktime"},
+        {"avi",  "video/x-msvideo"},
+        {"mkv",  "video/x-matroska"},
+        {"webm", "video/webm"},
+        // audio / voice
+        {"mp3",  "audio/mpeg"},
+        {"ogg",  "audio/ogg"},
+        {"oga",  "audio/ogg"},
+        {"opus", "audio/opus"},
+        {"m4a",  "audio/mp4"},
+        {"aac",  "audio/aac"},
+        {"wav",  "audio/wav"},
+        {"flac", "audio/flac"},
+        // document
+        {"txt",  "text/plain"},
         {"json", "application/json"},
-        {"pdf", "application/pdf"},
-        {"zip", "application/zip"}};
+        {"pdf",  "application/pdf"},
+        {"zip",  "application/zip"}};
 
     std::string ext = getFileExtension(filename);
     auto it = mimeMap.find(ext);
     if (it != mimeMap.end())
-    {
         return it->second;
-    }
-    return "text/plain";
+    return "application/octet-stream";
 }
 
-bool Telegram::__apiSendMedia(long long targetId, Media::Type type, const std::string &label, const std::string &filePath)
+namespace
 {
-    Request::Type raction = Request::Type::SEND_DOCUMENT;
-
-    switch (type)
+    struct MediaTypeHash
     {
-    case Media::Type::PHOTO:
-        raction = Request::Type::SEND_PHOTO;
-        break;
-    case Media::Type::AUDIO:
-        raction = Request::Type::SEND_AUDIO;
-        break;
-    case Media::Type::VOICE:
-        raction = Request::Type::SEND_VOICE;
-        break;
-    case Media::Type::ANIMATION:
-        raction = Request::Type::SEND_ANIMATION;
-        break;
-    case Media::Type::VIDEO:
-        raction = Request::Type::SEND_VIDEO;
-    default:
-        break;
+        std::size_t operator()(Media::Type t) const
+        {
+            return static_cast<std::size_t>(t);
+        }
+    };
+
+    static const std::unordered_map<Media::Type, Request::Type, MediaTypeHash> mediaRequestMap = {
+        {Media::Type::DOCUMENT,  Request::Type::SEND_DOCUMENT},
+        {Media::Type::PHOTO,     Request::Type::SEND_PHOTO},
+        {Media::Type::AUDIO,     Request::Type::SEND_AUDIO},
+        {Media::Type::VOICE,     Request::Type::SEND_VOICE},
+        {Media::Type::ANIMATION, Request::Type::SEND_ANIMATION},
+        {Media::Type::VIDEO,     Request::Type::SEND_VIDEO}};
+}
+
+bool Telegram::sendMediaImpl(long long targetId, Media::Type type, const std::string &label, const std::string &filePath)
+{
+    auto it = mediaRequestMap.find(type);
+    if (it == mediaRequestMap.end())
+    {
+        Debug::log(Debug::ERROR, __FILE__, __LINE__, __func__, "unsupported media type\n");
+        return false;
     }
+    const Request::Type raction = it->second;
 
     nlohmann::json mimeArray = {
         {{"name", "chat_id"}, {"is_file", false}, {"data", std::to_string(targetId)}},
         {{"name", "caption"}, {"is_file", false}, {"data", label}},
         {{"name", Media::typeToString(type)}, {"is_file", true}, {"data", filePath}, {"type", getMimeType(filePath)}}};
-    nlohmann::json data;
-    data["mime"] = mimeArray;
-    Request req(TELEGRAM_BASE_URL, this->token, raction, data);
+    Request req(TELEGRAM_BASE_URL, this->token, raction, mimeArray);
     if (req.isSuccess())
     {
         Debug::log(Debug::INFO, __FILE__, __LINE__, __func__, "success\n");
@@ -91,28 +109,28 @@ bool Telegram::__apiSendMedia(long long targetId, Media::Type type, const std::s
 
 bool Telegram::apiSendDocument(long long targetId, const std::string &label, const std::string &filePath)
 {
-    return this->__apiSendMedia(targetId, Media::Type::DOCUMENT, label, filePath);
+    return this->sendMediaImpl(targetId, Media::Type::DOCUMENT, label, filePath);
 }
 
 bool Telegram::apiSendPhoto(long long targetId, const std::string &label, const std::string &filePath)
 {
-    return this->__apiSendMedia(targetId, Media::Type::PHOTO, label, filePath);
+    return this->sendMediaImpl(targetId, Media::Type::PHOTO, label, filePath);
 }
 bool Telegram::apiSendAudio(long long targetId, const std::string &label, const std::string &filePath)
 {
-    return this->__apiSendMedia(targetId, Media::Type::AUDIO, label, filePath);
+    return this->sendMediaImpl(targetId, Media::Type::AUDIO, label, filePath);
 }
 bool Telegram::apiSendVoice(long long targetId, const std::string &label, const std::string &filePath)
 {
-    return this->__apiSendMedia(targetId, Media::Type::VOICE, label, filePath);
+    return this->sendMediaImpl(targetId, Media::Type::VOICE, label, filePath);
 }
 bool Telegram::apiSendAnimation(long long targetId, const std::string &label, const std::string &filePath)
 {
-    return this->__apiSendMedia(targetId, Media::Type::ANIMATION, label, filePath);
+    return this->sendMediaImpl(targetId, Media::Type::ANIMATION, label, filePath);
 }
 bool Telegram::apiSendVideo(long long targetId, const std::string &label, const std::string &filePath)
 {
-    return this->__apiSendMedia(targetId, Media::Type::VIDEO, label, filePath);
+    return this->sendMediaImpl(targetId, Media::Type::VIDEO, label, filePath);
 }
 
 std::string Telegram::apiGetMediaPath(const std::string &fileId)

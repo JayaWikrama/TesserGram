@@ -11,6 +11,7 @@
 #include "node-message.hpp"
 #include "keyboard.hpp"
 #include "polling-controller.hpp"
+#include "webhook-server.hpp"
 
 #define TELEGRAM_BASE_URL "https://api.telegram.org"
 
@@ -48,14 +49,15 @@ public:
     std::vector<unsigned char> apiDownloadMediaById(const std::string &fileId);
     std::vector<unsigned char> apiDownloadMediaByPath(const std::string &mediaPath);
 
-    bool apiSetWebhook(const std::string &url, const std::string &secretToken, const std::string &allowedUpdates, unsigned short maxConnection);
-    bool apiSetWebhook(const std::string &url, const std::string &secretToken, const std::string &allowedUpdates);
+    bool apiSetWebhook(const std::string &url, const std::string &secretToken, const std::vector<std::string> &allowedUpdates, unsigned short maxConnection);
+    bool apiSetWebhook(const std::string &url, const std::string &secretToken, const std::vector<std::string> &allowedUpdates);
     bool apiSetWebhook(const std::string &url, unsigned short maxConnection);
     bool apiSetWebhook(const std::string &url);
     bool apiUnsetWebhook();
     void setWebhookCallback(std::function<void(Telegram &, const NodeMessage &)> handler);
     void execWebhookCallback();
     void servWebhook();
+    void stopWebhook();
 
     bool apiSendKeyboard(long long targetId, const TKeyboard &keyboard);
     bool apiEditInlineKeyboard(long long targetId, long long messageId, const TKeyboard &keyboard);
@@ -73,11 +75,12 @@ private:
     std::deque<NodeMessage> messages;
 
     PollingController controller;
+    WebhookServer server;
 
     mutable std::mutex mutex;
 
-    bool __apiSendMedia(long long targetId, Media::Type type, const std::string &label, const std::string &filePath);
-    bool __parseGetUpdatesResponse(const std::string &buffer);
+    bool sendMediaImpl(long long targetId, Media::Type type, const std::string &label, const std::string &filePath);
+    bool parseUpdatesUnlocked(const std::string &buffer);
 };
 
 #endif

@@ -17,8 +17,10 @@ int main(int argc, char **argv)
     {
         telegram.info();
 
-        telegram.apiSendDocument(env["bot"]["target_id"].get<long long>(), "Read this document!", "../README.md");
-        telegram.apiSendPhoto(env["bot"]["target_id"].get<long long>(), "This the picture!", "../docs/images/typing_chat_action.jpeg");
+        const nlohmann::json &jTarget = env["bot"]["target_id"];
+        long long targetId = jTarget.is_number() ? jTarget.get<long long>() : std::stoll(jTarget.get<std::string>());
+        telegram.apiSendDocument(targetId, "Read this document!", "../README.md");
+        telegram.apiSendPhoto(targetId, "This the picture!", "../docs/images/typing_chat_action.jpeg");
     }
     else
     {
